@@ -165,6 +165,8 @@ This is a Next.js application with Supabase backend, based on the Next.js + Supa
 - Tailwind CSS for styling
 - shadcn/ui components
 - React 19
+- OpenAI API
+- Stripe
 
 ## Development Commands
 
