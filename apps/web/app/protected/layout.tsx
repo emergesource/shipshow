@@ -1,5 +1,7 @@
 import { AuthButton } from "@/components/auth-button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
+import { MobileNav } from "@/components/mobile-nav";
+import { MainNav } from "@/components/main-nav";
 import { Rocket } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -11,12 +13,17 @@ export default function ProtectedLayout({
 }) {
   return (
     <main className="min-h-screen flex flex-col">
-      <nav className="w-full border-b border-b-foreground/10">
+      {/* Top Bar - Logo and Auth */}
+      <div className="w-full border-b border-b-foreground/10">
         <div className="max-w-7xl mx-auto flex justify-between items-center p-4 px-6">
-          <Link href="/protected" className="font-mono font-semibold text-xl flex items-center gap-2">
-            <Rocket className="h-6 w-6" />
-            <span>SHIPSHOW</span>
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/protected" className="font-mono font-semibold text-xl flex items-center gap-2 hover:text-primary transition-colors">
+              <Rocket className="h-6 w-6" />
+              <span>SHIPSHOW</span>
+            </Link>
+            <MobileNav />
+          </div>
+
           <div className="flex items-center gap-4">
             <ThemeSwitcher />
             <Suspense>
@@ -24,7 +31,10 @@ export default function ProtectedLayout({
             </Suspense>
           </div>
         </div>
-      </nav>
+      </div>
+
+      {/* Navigation Bar */}
+      <MainNav />
 
       <div className="flex-1 w-full">
         <div className="max-w-7xl mx-auto p-6">
