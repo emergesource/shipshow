@@ -19,7 +19,7 @@ export function QuickNoteForm({ projects }: QuickNoteFormProps) {
   const [success, setSuccess] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+  function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
     // Submit on Cmd/Ctrl + Enter
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
       e.preventDefault();
