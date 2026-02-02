@@ -25,7 +25,15 @@ async function getRecentNotes() {
 
   const { data: notes } = await supabase
     .from("notes")
-    .select("id, content, created_at")
+    .select(`
+      id,
+      content,
+      created_at,
+      projects:project_id (
+        id,
+        name
+      )
+    `)
     .order("created_at", { ascending: false })
     .limit(3);
 
@@ -66,14 +74,22 @@ export default async function DashboardPage() {
             {recentNotes.map((note) => (
               <Card key={note.id} className="p-4 hover:border-primary/50 transition-colors">
                 <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(note.created_at).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit"
-                    })}
-                  </p>
+                  <div className="flex items-center gap-3">
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(note.created_at).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit"
+                      })}
+                    </p>
+                    {note.projects && (
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-mono">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                        {note.projects.name}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-foreground leading-relaxed">
                     {note.content}
                   </p>
