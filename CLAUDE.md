@@ -167,6 +167,7 @@ This is a Next.js application with Supabase backend, based on the Next.js + Supa
 - React 19
 - OpenAI API
 - Stripe
+- Resend
 
 ## Development Commands
 
@@ -303,3 +304,5 @@ supabase/
 4. **Local Supabase development** - The local Supabase instance runs on different ports (see `supabase/config.toml` for details). Studio is on 54323, API on 54321.
 
 5. **Auth session handling** - Always call `supabase.auth.getClaims()` in the middleware before checking user state to prevent random logouts.
+
+6. **Database source of truth** - `supabase/schema.sql` is the source of truth for the database schema. Always build migrations from schema.sql and push them to the migrations directory. Never manually edit migrations directly - update schema.sql, generate migrations from it, then apply them.
