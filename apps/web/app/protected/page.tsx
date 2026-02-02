@@ -61,6 +61,17 @@ async function getProjects() {
   return projects || [];
 }
 
+async function getAllProjects() {
+  const supabase = await createClient();
+
+  const { data: projects } = await supabase
+    .from("projects")
+    .select("id, name")
+    .order("name", { ascending: true });
+
+  return projects || [];
+}
+
 export default async function DashboardPage() {
   const user = await getUser();
 
@@ -69,6 +80,7 @@ export default async function DashboardPage() {
 
   const recentNotes = await getRecentNotes();
   const projects = await getProjects();
+  const allProjects = await getAllProjects();
 
   return (
     <div className="space-y-8">
@@ -81,42 +93,52 @@ export default async function DashboardPage() {
               Just write. No structure needed. We'll turn it into something great.
             </p>
           </div>
-          <QuickNoteForm />
+          <QuickNoteForm projects={allProjects} />
         </div>
       </Card>
 
       {/* Recent Activity */}
       {recentNotes.length > 0 && (
         <div className="space-y-4">
-          <h3 className="font-mono text-xl font-semibold flex items-center gap-2">
-            <Clock className="h-5 w-5 text-muted-foreground" />
-            Recent notes
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="font-mono text-xl font-semibold flex items-center gap-2">
+              <Clock className="h-5 w-5 text-muted-foreground" />
+              Recent notes
+            </h3>
+            <Link href="/protected/notes">
+              <Button variant="ghost" size="sm" className="gap-2">
+                View all
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
           <div className="space-y-3">
             {recentNotes.map((note) => (
-              <Card key={note.id} className="p-4 hover:border-primary/50 transition-colors">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(note.created_at).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit"
-                      })}
+              <Link key={note.id} href={`/protected/notes/${note.id}`}>
+                <Card className="p-4 hover:border-primary/50 transition-colors">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(note.created_at).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit"
+                        })}
+                      </p>
+                      {note.projects && (
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-mono">
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                          {note.projects.name}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-foreground leading-relaxed">
+                      {note.content}
                     </p>
-                    {note.projects && (
-                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-mono">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
-                        {note.projects.name}
-                      </span>
-                    )}
                   </div>
-                  <p className="text-foreground leading-relaxed">
-                    {note.content}
-                  </p>
-                </div>
-              </Card>
+                </Card>
+              </Link>
             ))}
           </div>
         </div>

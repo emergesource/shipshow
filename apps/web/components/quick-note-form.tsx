@@ -1,23 +1,23 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { ProjectHashtagInput } from "@/components/project-hashtag-input";
 import { createQuickNote } from "@/app/protected/actions";
 import { Loader2 } from "lucide-react";
 
-export function QuickNoteForm() {
+interface QuickNoteFormProps {
+  projects: {
+    id: string;
+    name: string;
+  }[];
+}
+
+export function QuickNoteForm({ projects }: QuickNoteFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    // Auto-focus the textarea on mount
-    if (textareaRef.current) {
-      textareaRef.current.focus();
-    }
-  }, []);
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     // Submit on Cmd/Ctrl + Enter
@@ -48,12 +48,13 @@ export function QuickNoteForm() {
 
   return (
     <form ref={formRef} action={handleSubmit} className="space-y-4">
-      <textarea
-        ref={textareaRef}
-        name="content"
-        placeholder="What did you work on today? No formatting needed, just write..."
-        className="w-full min-h-[120px] p-4 rounded-lg border border-input bg-background text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+      <ProjectHashtagInput
+        projects={projects}
+        placeholder="What did you work on today? Type #projectname to assign..."
+        rows={6}
+        required
         disabled={isSubmitting}
+        autoFocus
         onKeyDown={handleKeyDown}
       />
 

@@ -41,6 +41,7 @@ export async function ensureDefaultProject() {
 
 export async function createQuickNote(formData: FormData) {
   const content = formData.get("content") as string;
+  let projectId = formData.get("project_id") as string;
 
   if (!content || content.trim().length === 0) {
     return { error: "Note content cannot be empty" };
@@ -48,11 +49,13 @@ export async function createQuickNote(formData: FormData) {
 
   const supabase = await createClient();
 
-  // Ensure user has a default project
-  const projectId = await ensureDefaultProject();
+  // If no project specified via hashtag, use default project
+  if (!projectId) {
+    projectId = await ensureDefaultProject();
+  }
 
   if (!projectId) {
-    return { error: "Failed to create or find default project" };
+    return { error: "Failed to create or find project" };
   }
 
   const { error } = await supabase
