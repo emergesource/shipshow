@@ -41,35 +41,35 @@ export default function Home() {
 
             <div className="space-y-4">
               <h1 className="font-mono text-5xl md:text-7xl font-bold tracking-tight leading-tight">
-                Stop writing updates
+                Make your work
                 <br />
-                <span className="text-muted-foreground">from scratch</span>
+                <span className="text-muted-foreground">stand out</span>
               </h1>
 
               <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-                Your git commits already tell the story. Add context with quick notes,
-                then generate professional updates for any audience.
+                Get noticed. Get promoted. Wow your customers.
+                Turn your commits into updates that showcase real impact.
               </p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
               <Link href="/auth/sign-up">
                 <Button size="lg" className="text-lg px-10 h-14 gap-2">
-                  Start shipping updates
+                  Start getting noticed
                   <ArrowRight className="h-5 w-5" />
                 </Button>
               </Link>
             </div>
 
             <p className="text-sm text-muted-foreground">
-              Free to start. No credit card required.
+              Free forever. No credit card.
             </p>
           </div>
 
           {/* How It Works */}
           <div className="space-y-8">
             <h2 className="font-mono text-3xl md:text-4xl font-bold text-center">
-              How it works
+              Three steps to recognition
             </h2>
 
             <div className="grid md:grid-cols-3 gap-6">
@@ -78,9 +78,9 @@ export default function Home() {
                   <GitCommit className="h-8 w-8 text-primary" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="font-mono font-semibold text-xl">1. Connect your repos</h3>
+                  <h3 className="font-mono font-semibold text-xl">Connect repos</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">
-                    Link your git repositories. Shipshow automatically captures your commits as evidence of work done.
+                    Your commits are proof of work. Let them speak for you.
                   </p>
                 </div>
               </div>
@@ -90,9 +90,9 @@ export default function Home() {
                   <FileText className="h-8 w-8 text-primary" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="font-mono font-semibold text-xl">2. Add quick notes</h3>
+                  <h3 className="font-mono font-semibold text-xl">Add context</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">
-                    Jot down context, wins, or blockers. No titles, no structure required. Just capture what matters.
+                    Quick notes turn commits into stories. No formatting required.
                   </p>
                 </div>
               </div>
@@ -102,9 +102,9 @@ export default function Home() {
                   <Users className="h-8 w-8 text-primary" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="font-mono font-semibold text-xl">3. Generate for anyone</h3>
+                  <h3 className="font-mono font-semibold text-xl">Share everywhere</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">
-                    Create updates tailored for your team, manager, client, or public audience. Same work, different lens.
+                    Generate updates for your boss, clients, or LinkedIn. Same work, bigger impact.
                   </p>
                 </div>
               </div>
@@ -114,36 +114,35 @@ export default function Home() {
           {/* Use Cases */}
           <div className="space-y-8">
             <h2 className="font-mono text-3xl md:text-4xl font-bold text-center">
-              Built for how you actually work
+              Get credit for your work
             </h2>
 
             <div className="grid md:grid-cols-2 gap-8">
               <div className="space-y-3 p-6 rounded-xl border border-foreground/10 bg-card">
-                <h3 className="font-mono font-semibold text-xl">Weekly standups</h3>
+                <h3 className="font-mono font-semibold text-xl">Impress your manager</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  Stop scrambling Friday afternoon trying to remember what you did all week.
-                  Generate a complete summary from your actual work.
+                  Stop underselling your work in standups. Show real progress with concrete evidence.
                 </p>
               </div>
 
               <div className="space-y-3 p-6 rounded-xl border border-foreground/10 bg-card">
-                <h3 className="font-mono font-semibold text-xl">Client reports</h3>
+                <h3 className="font-mono font-semibold text-xl">Win more clients</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  Transform technical git commits into clear progress updates clients understand and value.
+                  Turn technical work into value they understand. Clients pay for clarity.
                 </p>
               </div>
 
               <div className="space-y-3 p-6 rounded-xl border border-foreground/10 bg-card">
-                <h3 className="font-mono font-semibold text-xl">Performance reviews</h3>
+                <h3 className="font-mono font-semibold text-xl">Nail performance reviews</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  Build your case with concrete evidence. Your commits prove what you shipped.
+                  Promotions go to people who can prove impact. Your commits are the receipts.
                 </p>
               </div>
 
               <div className="space-y-3 p-6 rounded-xl border border-foreground/10 bg-card">
-                <h3 className="font-mono font-semibold text-xl">Public updates</h3>
+                <h3 className="font-mono font-semibold text-xl">Build your reputation</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  Share your progress on LinkedIn, Twitter, or your blog. Build in public with confidence.
+                  Share your wins on LinkedIn. Stand out from developers who stay silent.
                 </p>
               </div>
             </div>
@@ -152,14 +151,14 @@ export default function Home() {
           {/* Final CTA */}
           <div className="text-center space-y-6 py-12">
             <h2 className="font-mono text-3xl md:text-4xl font-bold">
-              Ready to ship better updates?
+              Your work deserves an audience
             </h2>
             <p className="text-xl text-muted-foreground">
-              Start showing your work in minutes.
+              Start getting the recognition you've earned.
             </p>
             <Link href="/auth/sign-up">
               <Button size="lg" className="text-lg px-10 h-14 gap-2">
-                Get started free
+                Start for free
                 <ArrowRight className="h-5 w-5" />
               </Button>
             </Link>
@@ -169,7 +168,7 @@ export default function Home() {
 
       <footer className="w-full border-t py-8">
         <div className="max-w-6xl mx-auto px-6 text-center text-sm text-muted-foreground">
-          <p>&copy; 2026 Shipshow</p>
+          <p className="font-mono">&copy; 2026 Shipshow • Your work, amplified</p>
         </div>
       </footer>
     </main>
