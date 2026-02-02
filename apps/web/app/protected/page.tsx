@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { QuickNoteForm } from "@/components/quick-note-form";
+import { ProjectBadgeMenu } from "@/components/project-badge-menu";
 import { ensureDefaultProject } from "./actions";
 import Link from "next/link";
 import {
@@ -114,31 +115,32 @@ export default async function DashboardPage() {
           </div>
           <div className="space-y-3">
             {recentNotes.map((note) => (
-              <Link key={note.id} href={`/protected/notes/${note.id}`}>
-                <Card className="p-4 hover:border-primary/50 transition-colors">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(note.created_at).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit"
-                        })}
-                      </p>
-                      {note.projects && (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-mono">
-                          <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
-                          {note.projects.name}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-foreground leading-relaxed">
+              <Card key={note.id} className="p-4 hover:border-primary/50 transition-colors">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(note.created_at).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit"
+                      })}
+                    </p>
+                    {note.projects && (
+                      <ProjectBadgeMenu
+                        noteId={note.id}
+                        currentProject={note.projects}
+                        allProjects={allProjects}
+                      />
+                    )}
+                  </div>
+                  <Link href={`/protected/notes/${note.id}`}>
+                    <p className="text-foreground leading-relaxed hover:text-muted-foreground transition-colors">
                       {note.content}
                     </p>
-                  </div>
-                </Card>
-              </Link>
+                  </Link>
+                </div>
+              </Card>
             ))}
           </div>
         </div>
