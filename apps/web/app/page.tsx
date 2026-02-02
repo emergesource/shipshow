@@ -30,6 +30,13 @@ export default function Home() {
 
       <div className="flex-1 flex items-center justify-center px-6">
         <div className="max-w-4xl mx-auto text-center space-y-8 py-20">
+          <div className="flex justify-center mb-8">
+            <div className="relative inline-flex items-center justify-center p-6 bg-primary rounded-2xl shadow-lg">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/50 to-primary rounded-2xl blur-sm"></div>
+              <Rocket className="h-16 w-16 text-primary-foreground relative z-10" strokeWidth={2.5} />
+            </div>
+          </div>
+
           <h1 className="text-5xl md:text-6xl font-bold tracking-tight">
             Turn messy work into clear updates
           </h1>
