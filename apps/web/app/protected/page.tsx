@@ -1,12 +1,16 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { QuickNoteForm } from "@/components/quick-note-form";
 import { ensureDefaultProject } from "./actions";
+import Link from "next/link";
 import {
   GitBranch,
   Sparkles,
-  Clock
+  Clock,
+  ArrowRight,
+  FolderGit2
 } from "lucide-react";
 
 async function getUser() {
@@ -40,6 +44,23 @@ async function getRecentNotes() {
   return notes || [];
 }
 
+async function getProjects() {
+  const supabase = await createClient();
+
+  const { data: projects } = await supabase
+    .from("projects")
+    .select(`
+      id,
+      name,
+      description,
+      notes:notes(count)
+    `)
+    .order("created_at", { ascending: false })
+    .limit(4);
+
+  return projects || [];
+}
+
 export default async function DashboardPage() {
   const user = await getUser();
 
@@ -47,6 +68,7 @@ export default async function DashboardPage() {
   await ensureDefaultProject();
 
   const recentNotes = await getRecentNotes();
+  const projects = await getProjects();
 
   return (
     <div className="space-y-8">
@@ -99,6 +121,36 @@ export default async function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Projects */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-mono text-xl font-semibold">Your Projects</h3>
+          <Link href="/protected/projects">
+            <Button variant="ghost" size="sm" className="gap-2">
+              View all
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {projects.map((project) => (
+            <Link key={project.id} href={`/protected/projects/${project.id}`}>
+              <Card className="p-4 space-y-2 hover:border-primary/50 transition-colors h-full">
+                <h4 className="font-mono font-semibold">{project.name}</h4>
+                {project.description && (
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {project.description}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground font-mono">
+                  {project.notes[0]?.count || 0} notes
+                </p>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </div>
 
       {/* Next Steps */}
       <div className="space-y-4">
