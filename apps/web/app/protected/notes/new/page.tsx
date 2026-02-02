@@ -5,6 +5,8 @@ import { NoteForm } from "@/components/note-form";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
+export const dynamic = 'force-dynamic';
+
 async function getUser() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();

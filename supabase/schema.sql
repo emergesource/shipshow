@@ -65,10 +65,14 @@ create policy "Users can manage notes in their own projects" on notes
 -- ============================================================================
 create table repositories (
   id uuid primary key default gen_random_uuid(),
-  project_id uuid not null references projects(id),
+  user_id uuid not null references auth.users(id),
   provider text not null,
-  repo_url text not null,
+  repo_url text,
   default_branch text,
+  github_repo_id bigint unique,
+  owner text,
+  name text,
+  full_name text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -76,10 +80,57 @@ create table repositories (
 
 alter table repositories enable row level security;
 grant select, insert, update, delete on table repositories to authenticated;
-create policy "Users can manage repositories in their own projects" on repositories 
+create policy "Users can manage their own repositories" on repositories
+    for all
+    using ( auth.uid() = user_id )
+    with check ( auth.uid() = user_id );
+
+
+-- ============================================================================
+-- PROJECT_REPOSITORIES
+-- Join table for many-to-many relationship between projects and repositories
+-- ============================================================================
+create table project_repositories (
+  project_id uuid not null references projects(id) on delete cascade,
+  repository_id uuid not null references repositories(id) on delete cascade,
+  created_at timestamptz default now(),
+  primary key (project_id, repository_id)
+);
+
+
+alter table project_repositories enable row level security;
+grant select, insert, delete on table project_repositories to authenticated;
+create policy "Users can manage project repositories in their own projects" on project_repositories
     for all
     using ( project_id in (select id from projects where user_id = auth.uid()) )
     with check ( project_id in (select id from projects where user_id = auth.uid()) );
+
+
+-- ============================================================================
+-- OAUTH_CONNECTIONS
+-- Secure storage for OAuth tokens
+-- ============================================================================
+create table oauth_connections (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  provider text not null,
+  provider_user_id text,
+  access_token text not null,
+  refresh_token text,
+  expires_at timestamptz,
+  scope text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique(user_id, provider)
+);
+
+
+alter table oauth_connections enable row level security;
+grant select, insert, update, delete on table oauth_connections to authenticated;
+create policy "Users can manage their own OAuth connections" on oauth_connections
+    for all
+    using ( auth.uid() = user_id )
+    with check ( auth.uid() = user_id );
 
 
 -- ============================================================================
@@ -89,7 +140,7 @@ create policy "Users can manage repositories in their own projects" on repositor
 create table commits (
   id uuid primary key default gen_random_uuid(),
   repository_id uuid not null references repositories(id),
-  sha text not null,
+  sha text not null unique,
   author text,
   message text,
   committed_at timestamptz not null,
@@ -99,10 +150,10 @@ create table commits (
 
 alter table commits enable row level security;
 grant select, insert, update, delete on table commits to authenticated;
-create policy "Users can manage commits in their own projects" on commits
+create policy "Users can manage commits in their repositories" on commits
     for all
-    using ( repository_id in (select r.id from repositories r join projects p on r.project_id = p.id where p.user_id = auth.uid()) )
-    with check ( repository_id in (select r.id from repositories r join projects p on r.project_id = p.id where p.user_id = auth.uid()) );
+    using ( repository_id in (select id from repositories where user_id = auth.uid()) )
+    with check ( repository_id in (select id from repositories where user_id = auth.uid()) );
 
 
 -- ============================================================================

@@ -6,6 +6,8 @@ import { ProjectBadgeMenu } from "@/components/project-badge-menu";
 import Link from "next/link";
 import { Plus, FileText, Clock } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 async function getUser() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();

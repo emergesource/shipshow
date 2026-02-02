@@ -14,6 +14,8 @@ import {
   FolderGit2
 } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 async function getUser() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();

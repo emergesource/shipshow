@@ -5,8 +5,11 @@ import { Button } from "@/components/ui/button";
 import { ProjectForm } from "@/components/project-form";
 import { DeleteProjectButton } from "@/components/delete-project-button";
 import { ProjectBadgeMenu } from "@/components/project-badge-menu";
+import { FetchCommitsButton } from "@/components/fetch-commits-button";
 import Link from "next/link";
-import { ArrowLeft, FileText, GitBranch, Clock } from "lucide-react";
+import { ArrowLeft, FileText, GitBranch, Clock, Plus, ExternalLink } from "lucide-react";
+
+export const dynamic = 'force-dynamic';
 
 async function getUser() {
   const supabase = await createClient();
@@ -65,13 +68,25 @@ async function getProjectNotes(projectId: string) {
 async function getProjectRepositories(projectId: string) {
   const supabase = await createClient();
 
-  const { data: repos } = await supabase
-    .from("repositories")
-    .select("id, repo_url, provider, created_at")
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: false });
+  const { data } = await supabase
+    .from("project_repositories")
+    .select(`
+      repositories(
+        id,
+        name,
+        full_name,
+        owner,
+        provider,
+        repo_url,
+        default_branch,
+        created_at,
+        updated_at,
+        commits(count)
+      )
+    `)
+    .eq("project_id", projectId);
 
-  return repos || [];
+  return data?.map(pr => pr.repositories).filter(Boolean) || [];
 }
 
 async function getAllProjects() {
@@ -192,32 +207,79 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             <div className="flex items-center justify-between">
               <h3 className="font-mono text-xl font-semibold flex items-center gap-2">
                 <GitBranch className="h-5 w-5 text-muted-foreground" />
-                Repositories
+                Repositories ({repositories.length})
               </h3>
-              <Link href="/protected/repositories">
-                <Button variant="ghost" size="sm" className="font-mono text-xs">
-                  Manage
-                </Button>
-              </Link>
+              <div className="flex gap-2">
+                <Link href="/protected/repositories">
+                  <Button variant="ghost" size="sm" className="font-mono text-xs">
+                    View all
+                  </Button>
+                </Link>
+                <Link href="/protected/repositories/connect">
+                  <Button size="sm" className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Connect
+                  </Button>
+                </Link>
+              </div>
             </div>
             {repositories.length > 0 ? (
               <div className="space-y-3">
                 {repositories.map((repo) => (
                   <Card key={repo.id} className="p-4 hover:border-primary/50 transition-colors">
-                    <div className="space-y-1">
-                      <p className="text-sm font-mono text-foreground truncate">
-                        {repo.repo_url}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {repo.provider}
-                      </p>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-mono font-semibold truncate">
+                            {repo.full_name || repo.repo_url}
+                          </p>
+                          {repo.repo_url && (
+                            <a
+                              href={repo.repo_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-muted-foreground hover:text-primary"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{repo.commits?.[0]?.count || 0} commits</span>
+                          {repo.updated_at && (
+                            <>
+                              <span>•</span>
+                              <span>
+                                Synced {new Date(repo.updated_at).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric"
+                                })}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <FetchCommitsButton repositoryId={repo.id} size="sm" variant="ghost" />
+                        <Link href={`/protected/repositories/${repo.id}`}>
+                          <Button variant="ghost" size="sm">
+                            Settings
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   </Card>
                 ))}
               </div>
             ) : (
-              <Card className="p-6 text-center">
+              <Card className="p-6 text-center space-y-3">
                 <p className="text-sm text-muted-foreground">No repositories connected</p>
+                <Link href="/protected/repositories/connect">
+                  <Button size="sm" className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Connect Repository
+                  </Button>
+                </Link>
               </Card>
             )}
           </div>
