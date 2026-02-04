@@ -17,9 +17,20 @@ export async function generateSummary(formData: FormData) {
     const audienceId = formData.get("audience_id") as string;
     const periodStart = formData.get("period_start") as string;
     const periodEnd = formData.get("period_end") as string;
+    const repositoryBranchesStr = formData.get("repository_branches") as string;
 
     if (!projectId || !audienceId || !periodStart || !periodEnd) {
       return { error: "Missing required fields" };
+    }
+
+    // Parse repository branches
+    let repositoryBranches: Record<string, string> = {};
+    if (repositoryBranchesStr) {
+      try {
+        repositoryBranches = JSON.parse(repositoryBranchesStr);
+      } catch (e) {
+        console.error("Failed to parse repository_branches:", e);
+      }
     }
 
     // Fetch project details
@@ -118,7 +129,8 @@ export async function generateSummary(formData: FormData) {
         audience_id: audienceId,
         text: result.summary,
         period_start: periodStart,
-        period_end: periodEnd
+        period_end: periodEnd,
+        repository_branches: repositoryBranches
       })
       .select()
       .single();

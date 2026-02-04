@@ -298,6 +298,13 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
       formData.append("period_start", dateRange.start);
       formData.append("period_end", dateRange.end);
 
+      // Pass repository branches as JSON
+      const repoBranches: Record<string, string> = {};
+      repositories.forEach(repo => {
+        repoBranches[repo.id] = repo.selected_branch;
+      });
+      formData.append("repository_branches", JSON.stringify(repoBranches));
+
       const result = await generateSummary(formData);
 
       if (result?.error) {

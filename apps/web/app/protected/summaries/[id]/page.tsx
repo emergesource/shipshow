@@ -5,7 +5,7 @@ import { SummaryEditForm } from "@/components/summary-edit-form";
 import { RegenerateSummaryButton } from "@/components/regenerate-summary-button";
 import { DeleteSummaryButton } from "@/components/delete-summary-button";
 import Link from "next/link";
-import { ArrowLeft, FolderGit2, Users, Calendar } from "lucide-react";
+import { ArrowLeft, FolderGit2, Users, Calendar, GitBranch } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +30,7 @@ async function getSummary(id: string) {
       text,
       period_start,
       period_end,
+      repository_branches,
       created_at,
       updated_at,
       projects!inner(id, name, user_id),
@@ -72,11 +73,31 @@ async function getSummaryCounts(id: string) {
   };
 }
 
+async function getRepositoryBranches(repositoryBranches: Record<string, string> | null) {
+  if (!repositoryBranches || Object.keys(repositoryBranches).length === 0) {
+    return [];
+  }
+
+  const supabase = await createClient();
+  const repoIds = Object.keys(repositoryBranches);
+
+  const { data: repos } = await supabase
+    .from("repositories")
+    .select("id, name, full_name")
+    .in("id", repoIds);
+
+  return (repos || []).map(repo => ({
+    name: repo.full_name || repo.name,
+    branch: repositoryBranches[repo.id]
+  }));
+}
+
 export default async function SummaryPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getUser();
   const { id } = await params;
   const summary = await getSummary(id);
   const counts = await getSummaryCounts(id);
+  const repoBranches = await getRepositoryBranches(summary.repository_branches as Record<string, string> | null);
 
   return (
     <div className="space-y-8 max-w-4xl">
@@ -166,6 +187,22 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
               </span>
             </div>
           </div>
+
+          {repoBranches.length > 0 && (
+            <div className="pt-3 border-t space-y-2">
+              <h4 className="font-mono font-semibold text-xs text-muted-foreground">Branches Used</h4>
+              <div className="space-y-1.5">
+                {repoBranches.map((repo, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-sm">
+                    <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="font-mono text-muted-foreground">{repo.name}</span>
+                    <span className="text-muted-foreground">/</span>
+                    <span className="font-mono">{repo.branch}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </Card>
     </div>
