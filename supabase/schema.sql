@@ -25,6 +25,7 @@ create table projects (
   user_id uuid not null references auth.users(id),
   name text not null,
   description text,
+  todoist_project_id text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -209,6 +210,8 @@ create table summaries (
   period_start timestamptz,
   period_end timestamptz,
   repository_branches jsonb default '{}'::jsonb,
+  todoist_tasks_active_count integer default 0,
+  todoist_tasks_completed_count integer default 0,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );

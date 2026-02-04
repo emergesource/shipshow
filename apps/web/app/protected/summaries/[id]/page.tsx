@@ -33,6 +33,8 @@ async function getSummary(id: string) {
       period_start,
       period_end,
       repository_branches,
+      todoist_tasks_active_count,
+      todoist_tasks_completed_count,
       created_at,
       updated_at,
       projects!inner(id, name, user_id),
@@ -198,6 +200,18 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
               <span className="text-muted-foreground font-mono">Commits included</span>
               <span className="font-mono">{counts.commits}</span>
             </div>
+            {(summary.todoist_tasks_active_count > 0 || summary.todoist_tasks_completed_count > 0) && (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground font-mono">Tasks added/updated</span>
+                  <span className="font-mono">{summary.todoist_tasks_active_count}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground font-mono">Tasks completed</span>
+                  <span className="font-mono">{summary.todoist_tasks_completed_count}</span>
+                </div>
+              </>
+            )}
             <div className="flex justify-between">
               <span className="text-muted-foreground font-mono">Created</span>
               <span className="font-mono">

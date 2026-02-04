@@ -26,8 +26,9 @@ function buildUserPrompt(data: {
   periodEnd: string;
   notes: Array<{ content: string; created_at: string }>;
   commits: Array<{ message: string; author: string; committed_at: string }>;
+  todoistTasks?: { addedOrUpdated: Array<{ content: string; created_at: string; due?: any }>; completed: Array<{ content: string; completed_at: string }> };
 }): string {
-  const { projectName, audienceName, audienceDescription, periodStart, periodEnd, notes, commits } = data;
+  const { projectName, audienceName, audienceDescription, periodStart, periodEnd, notes, commits, todoistTasks } = data;
 
   let prompt = `# Summary Request
 
@@ -64,9 +65,39 @@ function buildUserPrompt(data: {
     prompt += '\nNo commits in this period.\n';
   }
 
+  // Add Todoist tasks if available
+  if (todoistTasks) {
+    const addedOrUpdatedTasks = todoistTasks.addedOrUpdated || [];
+    const completedTasks = todoistTasks.completed || [];
+
+    if (addedOrUpdatedTasks.length > 0 || completedTasks.length > 0) {
+      prompt += `\n### Todoist Tasks
+`;
+
+      if (addedOrUpdatedTasks.length > 0) {
+        prompt += `\n**Tasks Added or Updated (${addedOrUpdatedTasks.length})**:`;
+        prompt += `\nThese tasks were created or modified during the period:`;
+        addedOrUpdatedTasks.forEach((task, i) => {
+          const dueInfo = task.due ? ` (due: ${task.due.date})` : '';
+          prompt += `\n${i + 1}. ${task.content}${dueInfo}`;
+        });
+        prompt += '\n';
+      }
+
+      if (completedTasks.length > 0) {
+        prompt += `\n**Tasks Completed (${completedTasks.length})**:`;
+        prompt += `\nThese tasks were completed during the period:`;
+        completedTasks.forEach((task, i) => {
+          prompt += `\n${i + 1}. ${task.content} (completed: ${new Date(task.completed_at).toLocaleDateString()})`;
+        });
+        prompt += '\n';
+      }
+    }
+  }
+
   prompt += `\n---
 
-Based on the notes and commits above, generate a summary appropriate for the "${audienceName}" audience.`;
+Based on the notes, commits, and tasks above, generate a summary appropriate for the "${audienceName}" audience.`;
 
   return prompt;
 }
@@ -125,7 +156,8 @@ serve(async (req) => {
       period_start,
       period_end,
       notes,
-      commits
+      commits,
+      todoist_tasks
     } = body;
 
     // Validate required fields
@@ -158,7 +190,8 @@ serve(async (req) => {
       periodStart: period_start,
       periodEnd: period_end,
       notes: notes || [],
-      commits: commits || []
+      commits: commits || [],
+      todoistTasks: todoist_tasks
     });
 
     // Call OpenAI API

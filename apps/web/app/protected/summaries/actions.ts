@@ -36,7 +36,7 @@ export async function generateSummary(formData: FormData) {
     // Fetch project details
     const { data: project } = await supabase
       .from("projects")
-      .select("id, name")
+      .select("id, name, todoist_project_id")
       .eq("id", projectId)
       .eq("user_id", user.id)
       .single();
@@ -87,6 +87,43 @@ export async function generateSummary(formData: FormData) {
       commits = commitsData || [];
     }
 
+    // Fetch Todoist tasks if project has todoist_project_id
+    let todoistTasks: { addedOrUpdated: any[]; completed: any[] } = { addedOrUpdated: [], completed: [] };
+    if (project.todoist_project_id) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const todoistResponse = await fetch(
+            `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/todoist-fetch-data`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                type: 'tasks',
+                project_id: project.todoist_project_id,
+                since: periodStart,
+                until: periodEnd
+              })
+            }
+          );
+
+          if (todoistResponse.ok) {
+            const todoistResult = await todoistResponse.json();
+            todoistTasks = {
+              addedOrUpdated: todoistResult.tasks_added_or_updated || [],
+              completed: todoistResult.tasks_completed || []
+            };
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching Todoist tasks:", error);
+        // Continue without Todoist tasks
+      }
+    }
+
     // Call edge function to generate summary
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -110,7 +147,8 @@ export async function generateSummary(formData: FormData) {
           period_start: periodStart,
           period_end: periodEnd,
           notes: notes || [],
-          commits: commits || []
+          commits: commits || [],
+          todoist_tasks: todoistTasks
         })
       }
     );
@@ -130,7 +168,9 @@ export async function generateSummary(formData: FormData) {
         text: result.summary,
         period_start: periodStart,
         period_end: periodEnd,
-        repository_branches: repositoryBranches
+        repository_branches: repositoryBranches,
+        todoist_tasks_active_count: todoistTasks.addedOrUpdated.length,
+        todoist_tasks_completed_count: todoistTasks.completed.length
       })
       .select()
       .single();
@@ -188,7 +228,7 @@ export async function regenerateSummary(summaryId: string) {
         audience_id,
         period_start,
         period_end,
-        projects!inner(id, name, user_id)
+        projects!inner(id, name, user_id, todoist_project_id)
       `)
       .eq("id", summaryId)
       .single();
@@ -238,6 +278,43 @@ export async function regenerateSummary(summaryId: string) {
       commits = commitsData || [];
     }
 
+    // Fetch Todoist tasks if project has todoist_project_id
+    let todoistTasks: { addedOrUpdated: any[]; completed: any[] } = { addedOrUpdated: [], completed: [] };
+    if (summary.projects.todoist_project_id) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const todoistResponse = await fetch(
+            `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/todoist-fetch-data`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                type: 'tasks',
+                project_id: summary.projects.todoist_project_id,
+                since: summary.period_start,
+                until: summary.period_end
+              })
+            }
+          );
+
+          if (todoistResponse.ok) {
+            const todoistResult = await todoistResponse.json();
+            todoistTasks = {
+              addedOrUpdated: todoistResult.tasks_added_or_updated || [],
+              completed: todoistResult.tasks_completed || []
+            };
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching Todoist tasks:", error);
+        // Continue without Todoist tasks
+      }
+    }
+
     // Call edge function
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -261,7 +338,8 @@ export async function regenerateSummary(summaryId: string) {
           period_start: summary.period_start,
           period_end: summary.period_end,
           notes: notes || [],
-          commits: commits || []
+          commits: commits || [],
+          todoist_tasks: todoistTasks
         })
       }
     );
@@ -277,6 +355,8 @@ export async function regenerateSummary(summaryId: string) {
       .from("summaries")
       .update({
         text: result.summary,
+        todoist_tasks_active_count: todoistTasks.addedOrUpdated.length,
+        todoist_tasks_completed_count: todoistTasks.completed.length,
         updated_at: new Date().toISOString()
       })
       .eq("id", summaryId);

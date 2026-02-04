@@ -42,6 +42,8 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
   const [previewCounts, setPreviewCounts] = useState<{
     notes: number;
     commits: number;
+    todoistAddedOrUpdatedTasks: number;
+    todoistCompletedTasks: number;
   } | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
 
@@ -198,9 +200,53 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
           }
         }
 
+        // Fetch Todoist tasks if project has todoist_project_id
+        let todoistAddedOrUpdatedTasks = 0;
+        let todoistCompletedTasks = 0;
+
+        const { data: project } = await supabase
+          .from("projects")
+          .select("todoist_project_id")
+          .eq("id", selectedProject)
+          .single();
+
+        if (project?.todoist_project_id) {
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+              const todoistResponse = await fetch(
+                `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/todoist-fetch-data`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    type: 'tasks',
+                    project_id: project.todoist_project_id,
+                    since: dateRange.start,
+                    until: dateRange.end
+                  })
+                }
+              );
+
+              if (todoistResponse.ok) {
+                const todoistResult = await todoistResponse.json();
+                todoistAddedOrUpdatedTasks = (todoistResult.tasks_added_or_updated || []).length;
+                todoistCompletedTasks = (todoistResult.tasks_completed || []).length;
+              }
+            }
+          } catch (error) {
+            console.error("Error fetching Todoist tasks for preview:", error);
+          }
+        }
+
         setPreviewCounts({
           notes: notesCount || 0,
-          commits: commitsCount
+          commits: commitsCount,
+          todoistAddedOrUpdatedTasks,
+          todoistCompletedTasks
         });
         setRepoCommitCounts(repoCounts);
       } catch (err) {
@@ -283,8 +329,8 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
       return;
     }
 
-    if (previewCounts && previewCounts.notes === 0 && previewCounts.commits === 0) {
-      setError("No notes or commits found in this time period");
+    if (previewCounts && previewCounts.notes === 0 && previewCounts.commits === 0 && previewCounts.todoistAddedOrUpdatedTasks === 0 && previewCounts.todoistCompletedTasks === 0) {
+      setError("No notes, commits, or tasks found in this time period");
       return;
     }
 
@@ -516,9 +562,26 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
                 </span>
               </div>
             )}
+
+            {(previewCounts.todoistAddedOrUpdatedTasks > 0 || previewCounts.todoistCompletedTasks > 0) && (
+              <>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Sparkles className="h-4 w-4" />
+                  <span className="font-mono">
+                    {loadingPreview ? "..." : previewCounts.todoistAddedOrUpdatedTasks} tasks added/updated
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Sparkles className="h-4 w-4" />
+                  <span className="font-mono">
+                    {loadingPreview ? "..." : previewCounts.todoistCompletedTasks} tasks completed
+                  </span>
+                </div>
+              </>
+            )}
           </div>
 
-          {previewCounts.notes === 0 && previewCounts.commits === 0 && (
+          {previewCounts.notes === 0 && previewCounts.commits === 0 && previewCounts.todoistAddedOrUpdatedTasks === 0 && previewCounts.todoistCompletedTasks === 0 && (
             <p className="text-xs text-destructive">
               No work found in this time period
             </p>
@@ -535,7 +598,7 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
       {/* Generate Button */}
       <Button
         type="submit"
-        disabled={!canGenerate || isGenerating || (previewCounts?.notes === 0 && previewCounts?.commits === 0)}
+        disabled={!canGenerate || isGenerating || (previewCounts?.notes === 0 && previewCounts?.commits === 0 && previewCounts?.todoistAddedOrUpdatedTasks === 0 && previewCounts?.todoistCompletedTasks === 0)}
         size="lg"
         className="gap-2"
       >
@@ -553,7 +616,7 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
       </Button>
 
       <p className="text-xs text-muted-foreground">
-        This will use AI to create a summary from your notes and commits. It may take 10-30 seconds.
+        This will use AI to create a summary from your notes, commits, and tasks. It may take 10-30 seconds.
       </p>
     </form>
   );

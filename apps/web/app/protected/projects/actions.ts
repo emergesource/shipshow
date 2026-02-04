@@ -41,6 +41,7 @@ export async function createProject(formData: FormData) {
 export async function updateProject(projectId: string, formData: FormData) {
   const name = formData.get("name") as string;
   const description = formData.get("description") as string;
+  const todoistProjectId = formData.get("todoist_project_id") as string;
 
   if (!name || name.trim().length === 0) {
     return { error: "Project name is required" };
@@ -53,6 +54,7 @@ export async function updateProject(projectId: string, formData: FormData) {
     .update({
       name: name.trim(),
       description: description?.trim() || null,
+      todoist_project_id: todoistProjectId || null,
       updated_at: new Date().toISOString()
     })
     .eq("id", projectId);

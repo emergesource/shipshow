@@ -31,6 +31,7 @@ async function getProject(id: string) {
       id,
       name,
       description,
+      todoist_project_id,
       created_at,
       updated_at
     `)
@@ -100,6 +101,22 @@ async function getAllProjects() {
   return projects || [];
 }
 
+async function checkTodoistConnection() {
+  const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  const { data: connection } = await supabase
+    .from("oauth_connections")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("provider", "todoist")
+    .single();
+
+  return !!connection;
+}
+
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await getUser();
@@ -107,6 +124,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const notes = await getProjectNotes(id);
   const repositories = await getProjectRepositories(id);
   const allProjects = await getAllProjects();
+  const hasTodoistConnection = await checkTodoistConnection();
 
   return (
     <div className="space-y-8">
@@ -144,7 +162,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         <div className="space-y-4">
           <h2 className="font-mono text-2xl font-bold">Edit Project</h2>
           <Card className="p-6">
-            <ProjectForm project={project} />
+            <ProjectForm project={project} hasTodoistConnection={hasTodoistConnection} />
           </Card>
         </div>
 
