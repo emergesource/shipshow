@@ -374,6 +374,46 @@ export async function fetchGitHubRepos() {
   }
 }
 
+export async function fetchGitHubBranches(repoId: string) {
+  const supabase = await createClient();
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { error: "Not authenticated" };
+  }
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return { error: "No active session" };
+    }
+
+    // Call the edge function to fetch branches
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/github-fetch-branches`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ repository_id: repoId })
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { error: result.error || "Failed to fetch branches" };
+    }
+
+    return { branches: result.branches };
+  } catch (error) {
+    console.error("Error fetching GitHub branches:", error);
+    return { error: "Failed to fetch branches from GitHub" };
+  }
+}
+
 export async function fetchGitHubUsername() {
   const supabase = await createClient();
 

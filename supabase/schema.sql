@@ -208,6 +208,7 @@ create table summaries (
   text text not null,
   period_start timestamptz,
   period_end timestamptz,
+  repository_branches jsonb default '{}'::jsonb,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
