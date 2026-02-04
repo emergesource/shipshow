@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { generateSummary } from "@/app/protected/summaries/actions";
-import { fetchCommitsAction } from "@/app/protected/repositories/actions";
+import { fetchCommitsAction, fetchGitHubBranches } from "@/app/protected/repositories/actions";
 import { Loader2, Calendar, FileText, GitBranch, Sparkles, RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -51,9 +51,11 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
     full_name: string;
     default_branch: string;
     selected_branch: string;
+    branches: string[];
   }>>([]);
   const [repoCommitCounts, setRepoCommitCounts] = useState<Record<string, number>>({});
   const [fetchingCommits, setFetchingCommits] = useState<Record<string, boolean>>({});
+  const [loadingBranches, setLoadingBranches] = useState<Record<string, boolean>>({});
 
   // Calculate date range based on period
   const getDateRange = useCallback((): { start: string; end: string } | null => {
@@ -111,13 +113,25 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
           .eq("project_id", selectedProject);
 
         const repos = projectRepos?.map(pr => pr.repositories).filter(Boolean) || [];
-        setRepositories(repos.map(repo => ({
-          id: repo.id,
-          name: repo.name,
-          full_name: repo.full_name,
-          default_branch: repo.default_branch || "main",
-          selected_branch: repo.default_branch || "main"
-        })));
+        const reposWithBranches = await Promise.all(
+          repos.map(async (repo) => {
+            setLoadingBranches(prev => ({ ...prev, [repo.id]: true }));
+            const result = await fetchGitHubBranches(repo.id);
+            const branches = result.branches || [repo.default_branch || "main"];
+            setLoadingBranches(prev => ({ ...prev, [repo.id]: false }));
+
+            return {
+              id: repo.id,
+              name: repo.name,
+              full_name: repo.full_name,
+              default_branch: repo.default_branch || "main",
+              selected_branch: repo.default_branch || "main",
+              branches
+            };
+          })
+        );
+
+        setRepositories(reposWithBranches);
       } catch (err) {
         console.error("Error loading repositories:", err);
       }
@@ -459,10 +473,16 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
                   <select
                     value={repo.selected_branch}
                     onChange={(e) => handleBranchChange(repo.id, e.target.value)}
-                    disabled={isGenerating}
+                    disabled={isGenerating || loadingBranches[repo.id]}
                     className="text-xs px-1.5 py-0.5 rounded border border-input bg-background font-mono focus:outline-none focus:ring-1 focus:ring-ring"
                   >
-                    <option value={repo.default_branch}>{repo.default_branch}</option>
+                    {loadingBranches[repo.id] ? (
+                      <option>Loading...</option>
+                    ) : (
+                      repo.branches.map(branch => (
+                        <option key={branch} value={branch}>{branch}</option>
+                      ))
+                    )}
                   </select>
                   <span className="font-mono">
                     {loadingPreview ? "..." : (repoCommitCounts[repo.id] || 0)} commits

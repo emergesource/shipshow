@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { updateRepository } from "@/app/protected/repositories/actions";
+import { updateRepository, fetchGitHubBranches } from "@/app/protected/repositories/actions";
 import { Loader2 } from "lucide-react";
 
 interface RepositoryFormProps {
@@ -31,6 +31,21 @@ export function RepositoryForm({
   const [selectedProjects, setSelectedProjects] = useState<Set<string>>(
     new Set(linkedProjectIds)
   );
+  const [branches, setBranches] = useState<string[]>([repository.default_branch || "main"]);
+  const [loadingBranches, setLoadingBranches] = useState(true);
+
+  useEffect(() => {
+    async function loadBranches() {
+      setLoadingBranches(true);
+      const result = await fetchGitHubBranches(repository.id);
+      if (result.branches) {
+        setBranches(result.branches);
+      }
+      setLoadingBranches(false);
+    }
+
+    loadBranches();
+  }, [repository.id]);
 
   function toggleProject(projectId: string) {
     const newSet = new Set(selectedProjects);
@@ -85,14 +100,24 @@ export function RepositoryForm({
         <Label htmlFor="default_branch" className="font-mono">
           Default Branch
         </Label>
-        <Input
+        <select
           id="default_branch"
           name="default_branch"
           defaultValue={repository.default_branch || "main"}
-          placeholder="main"
-          disabled={isSubmitting}
-          className="font-mono"
-        />
+          disabled={isSubmitting || loadingBranches}
+          className="w-full p-3 rounded-md border border-input bg-background text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+        >
+          {loadingBranches ? (
+            <option>Loading branches...</option>
+          ) : (
+            branches.map(branch => (
+              <option key={branch} value={branch}>{branch}</option>
+            ))
+          )}
+        </select>
+        <p className="text-xs text-muted-foreground">
+          Select the branch to use for fetching commits
+        </p>
       </div>
 
       <div className="space-y-3">
