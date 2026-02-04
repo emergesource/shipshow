@@ -5,7 +5,9 @@ import { SummaryEditForm } from "@/components/summary-edit-form";
 import { RegenerateSummaryButton } from "@/components/regenerate-summary-button";
 import { DeleteSummaryButton } from "@/components/delete-summary-button";
 import Link from "next/link";
-import { ArrowLeft, FolderGit2, Users, Calendar, GitBranch } from "lucide-react";
+import { ArrowLeft, FolderGit2, Users, Calendar, GitBranch, Send } from "lucide-react";
+import { GenerateMessageDialog } from "@/components/generate-message-dialog";
+import { MessageCard } from "@/components/message-card";
 
 export const dynamic = 'force-dynamic';
 
@@ -92,12 +94,42 @@ async function getRepositoryBranches(repositoryBranches: Record<string, string> 
   }));
 }
 
+async function getMessages(summaryId: string) {
+  const supabase = await createClient();
+
+  const { data: messages } = await supabase
+    .from("messages")
+    .select(`
+      id,
+      text,
+      created_at,
+      channels!inner(id, name, character_limit)
+    `)
+    .eq("summary_id", summaryId)
+    .order("created_at", { ascending: false });
+
+  return messages || [];
+}
+
+async function getChannels() {
+  const supabase = await createClient();
+
+  const { data: channels } = await supabase
+    .from("channels")
+    .select("id, name, description, character_limit")
+    .order("name", { ascending: true });
+
+  return channels || [];
+}
+
 export default async function SummaryPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getUser();
   const { id } = await params;
   const summary = await getSummary(id);
   const counts = await getSummaryCounts(id);
   const repoBranches = await getRepositoryBranches(summary.repository_branches as Record<string, string> | null);
+  const messages = await getMessages(id);
+  const channels = await getChannels();
 
   return (
     <div className="space-y-8 max-w-4xl">
@@ -205,6 +237,39 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
           )}
         </div>
       </Card>
+
+      {/* Messages */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-mono text-xl font-semibold flex items-center gap-2">
+            <Send className="h-5 w-5 text-muted-foreground" />
+            Messages
+          </h3>
+          <GenerateMessageDialog
+            summaryId={id}
+            channels={channels}
+            existingChannelIds={messages.map(m => m.channels.id)}
+          />
+        </div>
+
+        {messages.length > 0 ? (
+          <div className="space-y-3">
+            {messages.map((message) => (
+              <MessageCard key={message.id} message={message} />
+            ))}
+          </div>
+        ) : (
+          <Card className="p-8 text-center space-y-3 bg-muted/30">
+            <Send className="h-8 w-8 text-muted-foreground mx-auto" />
+            <div className="space-y-1">
+              <h4 className="font-mono font-semibold">No messages yet</h4>
+              <p className="text-sm text-muted-foreground">
+                Transform this summary for different channels like Email, Twitter, or LinkedIn
+              </p>
+            </div>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

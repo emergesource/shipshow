@@ -14,7 +14,8 @@ import {
   FolderGit2,
   FileText,
   Users,
-  Award
+  Award,
+  Send
 } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
@@ -90,12 +91,34 @@ async function getRecentSummaries() {
       text,
       created_at,
       projects!inner(id, name, user_id),
-      audiences(id, name)
+      audiences(id, name),
+      messages(count)
     `)
     .order("created_at", { ascending: false })
     .limit(3);
 
   return summaries || [];
+}
+
+async function getRecentMessages() {
+  const supabase = await createClient();
+
+  const { data: messages } = await supabase
+    .from("messages")
+    .select(`
+      id,
+      text,
+      created_at,
+      channels!inner(id, name),
+      summaries!inner(
+        id,
+        projects!inner(id, name, user_id)
+      )
+    `)
+    .order("created_at", { ascending: false })
+    .limit(3);
+
+  return messages || [];
 }
 
 async function getOnboardingStatus() {
@@ -127,6 +150,7 @@ export default async function DashboardPage() {
   const projects = await getProjects();
   const allProjects = await getAllProjects();
   const recentSummaries = await getRecentSummaries();
+  const recentMessages = await getRecentMessages();
   const onboardingStatus = await getOnboardingStatus();
 
   return (
@@ -270,10 +294,59 @@ export default async function DashboardPage() {
                       <Users className="h-4 w-4" />
                       <span className="font-mono">{summary.audiences.name}</span>
                     </div>
+                    <span className="text-muted-foreground">•</span>
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Send className="h-4 w-4" />
+                      <span className="font-mono">{summary.messages[0]?.count || 0}</span>
+                    </div>
                   </div>
                   <Link href={`/protected/summaries/${summary.id}`}>
                     <p className="text-foreground leading-relaxed hover:text-muted-foreground transition-colors line-clamp-2">
                       {summary.text}
+                    </p>
+                  </Link>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recent Messages */}
+      {recentMessages.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-mono text-xl font-semibold flex items-center gap-2">
+              <Send className="h-5 w-5 text-muted-foreground" />
+              Recent messages
+            </h3>
+          </div>
+          <div className="space-y-3">
+            {recentMessages.map((message) => (
+              <Card key={message.id} className="p-4 hover:border-primary/50 transition-colors">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(message.created_at).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit"
+                      })}
+                    </p>
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Send className="h-4 w-4" />
+                      <span className="font-mono">{message.channels.name}</span>
+                    </div>
+                    <span className="text-muted-foreground">•</span>
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <FolderGit2 className="h-4 w-4" />
+                      <span className="font-mono">{message.summaries.projects.name}</span>
+                    </div>
+                  </div>
+                  <Link href={`/protected/summaries/${message.summaries.id}`}>
+                    <p className="text-foreground leading-relaxed hover:text-muted-foreground transition-colors line-clamp-2">
+                      {message.text}
                     </p>
                   </Link>
                 </div>

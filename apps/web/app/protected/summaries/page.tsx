@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Plus, FileText, Users, Calendar, FolderGit2 } from "lucide-react";
+import { Plus, FileText, Users, Calendar, FolderGit2, Send } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +30,8 @@ async function getSummaries() {
       period_end,
       created_at,
       projects!inner(id, name, user_id),
-      audiences(id, name)
+      audiences(id, name),
+      messages(count)
     `)
     .order("created_at", { ascending: false });
 
@@ -98,6 +99,11 @@ export default async function SummariesPage() {
                           year: "numeric"
                         })}
                       </span>
+                    </div>
+                    <span className="text-muted-foreground">•</span>
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Send className="h-4 w-4" />
+                      <span className="font-mono">{summary.messages[0]?.count || 0}</span>
                     </div>
                   </div>
                   <span className="text-xs text-muted-foreground font-mono whitespace-nowrap">

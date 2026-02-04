@@ -259,20 +259,24 @@ create policy "Users can manage summary_commits in their own projects" on summar
 
 -- ============================================================================
 -- CHANNELS
--- Where updates will be shared (Slack, LinkedIn, etc.)
+-- Where updates will be shared (Email, Twitter, LinkedIn, etc.)
 -- ============================================================================
 create table channels (
   id uuid primary key default gen_random_uuid(),
-  name text not null,
-  max_length int,
-  format text not null,
-  rules jsonb,
+  name text not null unique,
+  description text,
+  prompt_template text not null,
+  character_limit int,
   created_at timestamptz default now()
 );
 
 
 alter table channels enable row level security;
 grant select on table channels to authenticated;
+create policy "All users can read channels" on channels
+  for select
+  to authenticated
+  using (true);
 
 -- ============================================================================
 -- MESSAGES
@@ -280,10 +284,12 @@ grant select on table channels to authenticated;
 -- ============================================================================
 create table messages (
   id uuid primary key default gen_random_uuid(),
-  summary_id uuid not null references summaries(id),
-  channel_id uuid not null references channels(id),
-  content text not null,
-  created_at timestamptz default now()
+  summary_id uuid not null references summaries(id) on delete cascade,
+  channel_id uuid not null references channels(id) on delete cascade,
+  text text not null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique(summary_id, channel_id)
 );
 
 
