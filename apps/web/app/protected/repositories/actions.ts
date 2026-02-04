@@ -373,3 +373,42 @@ export async function fetchGitHubRepos() {
     return { error: "Failed to fetch repositories from GitHub" };
   }
 }
+
+export async function fetchGitHubUsername() {
+  const supabase = await createClient();
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { error: "Not authenticated" };
+  }
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return { error: "No active session" };
+    }
+
+    // Call edge function to get user info
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/github-user-info`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { error: result.error || "Failed to fetch user info" };
+    }
+
+    return { username: result.login };
+  } catch (error) {
+    console.error("Error fetching GitHub username:", error);
+    return { error: "Failed to fetch GitHub user info" };
+  }
+}

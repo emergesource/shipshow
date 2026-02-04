@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { fetchGitHubRepos, addGitHubRepositories } from "@/app/protected/repositories/actions";
+import { fetchGitHubRepos, addGitHubRepositories, fetchGitHubUsername } from "@/app/protected/repositories/actions";
 import { Loader2, GitBranch, ExternalLink, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
@@ -28,12 +28,29 @@ interface Project {
   name: string;
 }
 
+// Helper to determine if repo is from an organization
+// We'll fetch the user's GitHub username and compare it to repo.owner.login
+function isOrgRepo(repo: GitHubRepo, username: string): boolean {
+  return username && repo.owner.login !== username;
+}
+
+function getReAuthUrl(): string {
+  const githubClientId = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const redirectUri = `${appUrl}/protected/repositories/callback`;
+  const scope = "repo";
+  const state = Math.random().toString(36).substring(7);
+
+  return `https://github.com/login/oauth/authorize?client_id=${githubClientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}&prompt=consent`;
+}
+
 export default function SelectRepositoriesPage() {
   const router = useRouter();
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedRepos, setSelectedRepos] = useState<Set<number>>(new Set());
   const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
+  const [githubUsername, setGithubUsername] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +58,12 @@ export default function SelectRepositoriesPage() {
   useEffect(() => {
     async function loadData() {
       try {
+        // Fetch GitHub username
+        const usernameResult = await fetchGitHubUsername();
+        if (!usernameResult.error && usernameResult.username) {
+          setGithubUsername(usernameResult.username);
+        }
+
         // Fetch GitHub repos
         const reposResult = await fetchGitHubRepos();
         if (reposResult.error) {
@@ -87,6 +110,24 @@ export default function SelectRepositoriesPage() {
       newSet.add(projectId);
     }
     setSelectedProjects(newSet);
+  }
+
+  async function handleRefresh() {
+    setLoading(true);
+    setError(null);
+    try {
+      const reposResult = await fetchGitHubRepos();
+      if (reposResult.error) {
+        setError(reposResult.error);
+        return;
+      }
+      setRepos(reposResult.repos || []);
+    } catch (err) {
+      console.error("Error refreshing repositories:", err);
+      setError("Failed to refresh repositories");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -174,6 +215,34 @@ export default function SelectRepositoriesPage() {
         </div>
       </div>
 
+      {/* Organization Help Banner */}
+      <Card className="p-4 bg-muted/50 border-primary/20">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1 flex-1">
+            <p className="text-sm font-medium">Don&apos;t see your organization&apos;s repositories?</p>
+            <p className="text-xs text-muted-foreground">
+              You may need to grant Shipshow access to your organizations.
+              Click &quot;Re-authorize GitHub&quot; and grant access to the organizations you want to use.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={loading}
+            >
+              Refresh List
+            </Button>
+            <a href={getReAuthUrl()}>
+              <Button size="sm" variant="default">
+                Re-authorize GitHub
+              </Button>
+            </a>
+          </div>
+        </div>
+      </Card>
+
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Project Selection */}
         <Card className="p-6 space-y-4">
@@ -243,11 +312,16 @@ export default function SelectRepositoriesPage() {
                       htmlFor={`repo-${repo.id}`}
                       className="flex-1 cursor-pointer space-y-1"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <GitBranch className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                         <span className="font-mono font-semibold text-sm">
                           {repo.full_name}
                         </span>
+                        {isOrgRepo(repo, githubUsername) && (
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                            Organization
+                          </span>
+                        )}
                       </div>
                       {repo.description && (
                         <p className="text-xs text-muted-foreground line-clamp-2">

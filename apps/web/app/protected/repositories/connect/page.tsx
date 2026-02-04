@@ -90,6 +90,18 @@ export default async function ConnectRepositoryPage() {
               </li>
             </ul>
           </div>
+
+          {/* Organization Access Guidance */}
+          <div className="pl-14 pt-4 border-t space-y-2">
+            <p className="text-sm font-semibold text-foreground">
+              Accessing Organization Repositories
+            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              During authorization, GitHub will show your organizations. Click &quot;Grant&quot; next to each
+              organization to access their repositories. Some organizations require admin approval
+              before apps can access their repos.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-4 pl-14">
