@@ -9,7 +9,7 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Shipshow - Turn messy work into clear updates",
+  title: "Shipshow - Showcase your work, get notice, get paid",
   description: "Combine your notes and git activity into audience-appropriate updates you can confidently share.",
 };
 

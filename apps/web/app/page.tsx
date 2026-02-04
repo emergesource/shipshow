@@ -47,7 +47,7 @@ export default function Home() {
               </h1>
 
               <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-                Get noticed. Get promoted. Wow your customers.
+                Get noticed. Get promoted. Get paid.
                 Turn your commits into updates that showcase real impact.
               </p>
             </div>
@@ -55,15 +55,15 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
               <Link href="/auth/sign-up">
                 <Button size="lg" className="text-lg px-10 h-14 gap-2">
-                  Start getting noticed
+                  Start the SHIPSHOW
                   <ArrowRight className="h-5 w-5" />
                 </Button>
               </Link>
             </div>
 
-            <p className="text-sm text-muted-foreground">
+            {/* <p className="text-sm text-muted-foreground">
               Free forever. No credit card.
-            </p>
+            </p> */}
           </div>
 
           {/* How It Works */}
@@ -168,7 +168,7 @@ export default function Home() {
 
       <footer className="w-full border-t py-8">
         <div className="max-w-6xl mx-auto px-6 text-center text-sm text-muted-foreground">
-          <p className="font-mono">&copy; 2026 Shipshow • Your work, amplified</p>
+          <p className="font-mono">&copy; 2026 <a className="underline" href="https://emergesource.com" target="_blank" rel="noopener noreferrer">emergesource</a> • Showcase your work!</p>
         </div>
       </footer>
     </main>
