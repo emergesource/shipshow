@@ -11,7 +11,10 @@ import {
   Sparkles,
   Clock,
   ArrowRight,
-  FolderGit2
+  FolderGit2,
+  FileText,
+  Users,
+  Award
 } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
@@ -56,7 +59,9 @@ async function getProjects() {
       id,
       name,
       description,
-      notes:notes(count)
+      notes:notes(count),
+      summaries:summaries(count),
+      project_repositories:project_repositories(count)
     `)
     .order("created_at", { ascending: false })
     .limit(4);
@@ -75,6 +80,43 @@ async function getAllProjects() {
   return projects || [];
 }
 
+async function getRecentSummaries() {
+  const supabase = await createClient();
+
+  const { data: summaries } = await supabase
+    .from("summaries")
+    .select(`
+      id,
+      text,
+      created_at,
+      projects!inner(id, name, user_id),
+      audiences(id, name)
+    `)
+    .order("created_at", { ascending: false })
+    .limit(3);
+
+  return summaries || [];
+}
+
+async function getOnboardingStatus() {
+  const supabase = await createClient();
+
+  // Check if user has any repositories
+  const { count: repoCount } = await supabase
+    .from("repositories")
+    .select("*", { count: "exact", head: true });
+
+  // Check if user has any summaries
+  const { count: summaryCount } = await supabase
+    .from("summaries")
+    .select("*", { count: "exact", head: true });
+
+  return {
+    hasRepositories: (repoCount || 0) > 0,
+    hasSummaries: (summaryCount || 0) > 0
+  };
+}
+
 export default async function DashboardPage() {
   const user = await getUser();
 
@@ -84,6 +126,8 @@ export default async function DashboardPage() {
   const recentNotes = await getRecentNotes();
   const projects = await getProjects();
   const allProjects = await getAllProjects();
+  const recentSummaries = await getRecentSummaries();
+  const onboardingStatus = await getOnboardingStatus();
 
   return (
     <div className="space-y-8">
@@ -162,58 +206,137 @@ export default async function DashboardPage() {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           {projects.map((project) => (
             <Link key={project.id} href={`/protected/projects/${project.id}`}>
-              <Card className="p-4 space-y-2 hover:border-primary/50 transition-colors h-full">
+              <Card className="p-4 space-y-3 hover:border-primary/50 transition-colors h-full">
                 <h4 className="font-mono font-semibold">{project.name}</h4>
                 {project.description && (
                   <p className="text-xs text-muted-foreground line-clamp-2">
                     {project.description}
                   </p>
                 )}
-                <p className="text-xs text-muted-foreground font-mono">
-                  {project.notes[0]?.count || 0} notes
-                </p>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono flex-wrap">
+                  <span>{project.notes[0]?.count || 0} notes</span>
+                  <span>•</span>
+                  <span>{project.project_repositories[0]?.count || 0} repos</span>
+                  <span>•</span>
+                  <span>{project.summaries[0]?.count || 0} summaries</span>
+                </div>
               </Card>
             </Link>
           ))}
         </div>
       </div>
 
+      {/* Recent Summaries */}
+      {recentSummaries.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-mono text-xl font-semibold flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-muted-foreground" />
+              Recent summaries
+            </h3>
+            <Link href="/protected/summaries">
+              <Button variant="ghost" size="sm" className="gap-2">
+                View all
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+          <div className="space-y-3">
+            {recentSummaries.map((summary) => (
+              <Link key={summary.id} href={`/protected/summaries/${summary.id}`}>
+                <Card className="p-4 hover:border-primary/50 transition-colors">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <FolderGit2 className="h-4 w-4" />
+                        <span className="font-mono">{summary.projects.name}</span>
+                      </div>
+                      <span className="text-muted-foreground">•</span>
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Users className="h-4 w-4" />
+                        <span className="font-mono">{summary.audiences.name}</span>
+                      </div>
+                      <span className="text-muted-foreground">•</span>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(summary.created_at).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric"
+                        })}
+                      </p>
+                    </div>
+                    <p className="text-foreground leading-relaxed line-clamp-2">
+                      {summary.text}
+                    </p>
+                  </div>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Next Steps */}
       <div className="space-y-4">
         <h3 className="font-mono text-xl font-semibold">Next steps</h3>
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card className="p-6 space-y-4 hover:border-primary/50 transition-colors">
-            <div className="p-3 bg-primary/10 rounded-lg w-fit">
-              <GitBranch className="h-6 w-6 text-primary" />
-            </div>
-            <div className="space-y-2">
-              <h4 className="font-mono font-semibold text-lg">Connect a repository</h4>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                Link your git repos so your commits become proof of work. Combined with notes,
-                you'll have everything needed for powerful updates.
-              </p>
-            </div>
-            <p className="text-sm text-muted-foreground font-mono">
-              Coming soon
-            </p>
-          </Card>
 
-          <Card className="p-6 space-y-4 hover:border-primary/50 transition-colors">
-            <div className="p-3 bg-primary/10 rounded-lg w-fit">
-              <Sparkles className="h-6 w-6 text-primary" />
+        {onboardingStatus.hasRepositories && onboardingStatus.hasSummaries ? (
+          <Card className="p-8 border-primary/30 bg-primary/5">
+            <div className="flex items-start gap-6">
+              <div className="p-4 bg-primary/20 rounded-lg">
+                <Award className="h-8 w-8 text-primary" />
+              </div>
+              <div className="space-y-2 flex-1">
+                <h4 className="font-mono font-semibold text-xl">You're a rockstar!</h4>
+                <p className="text-muted-foreground leading-relaxed">
+                  You've got the full workflow set up: notes, repositories, and summaries.
+                  Keep capturing your work and turning it into clear updates.
+                </p>
+              </div>
             </div>
-            <div className="space-y-2">
-              <h4 className="font-mono font-semibold text-lg">Generate your first summary</h4>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                Once you have notes and commits, generate AI summaries tailored
-                for your manager, clients, or public audience.
-              </p>
-            </div>
-            <p className="text-sm text-muted-foreground font-mono">
-              Coming soon
-            </p>
           </Card>
-        </div>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-6">
+            {!onboardingStatus.hasRepositories && (
+              <Link href="/protected/repositories/connect">
+                <Card className="p-6 space-y-4 hover:border-primary/50 transition-colors h-full">
+                  <div className="p-3 bg-primary/10 rounded-lg w-fit">
+                    <GitBranch className="h-6 w-6 text-primary" />
+                  </div>
+                  <div className="space-y-2">
+                    <h4 className="font-mono font-semibold text-lg">Connect a repository</h4>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      Link your git repos so your commits become proof of work. Combined with notes,
+                      you'll have everything needed for powerful updates.
+                    </p>
+                  </div>
+                  <Button variant="outline" className="w-full">
+                    Connect GitHub
+                  </Button>
+                </Card>
+              </Link>
+            )}
+
+            {!onboardingStatus.hasSummaries && (
+              <Link href="/protected/summaries/new">
+                <Card className="p-6 space-y-4 hover:border-primary/50 transition-colors h-full">
+                  <div className="p-3 bg-primary/10 rounded-lg w-fit">
+                    <Sparkles className="h-6 w-6 text-primary" />
+                  </div>
+                  <div className="space-y-2">
+                    <h4 className="font-mono font-semibold text-lg">Generate your first summary</h4>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      Once you have notes and commits, generate AI summaries tailored
+                      for your manager, clients, or public audience.
+                    </p>
+                  </div>
+                  <Button variant="outline" className="w-full">
+                    Create Summary
+                  </Button>
+                </Card>
+              </Link>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
