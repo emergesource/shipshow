@@ -21,8 +21,15 @@ async function getTodoistToken(supabase: any, userId: string): Promise<string> {
     .single();
 
   if (error || !data) {
+    console.error('Failed to get Todoist token:', error);
     throw new Error('Todoist not connected');
   }
+
+  console.log('Retrieved Todoist token:', {
+    hasToken: !!data.access_token,
+    tokenLength: data.access_token?.length,
+    tokenPrefix: data.access_token?.substring(0, 10)
+  });
 
   return data.access_token;
 }
@@ -31,7 +38,11 @@ async function getTodoistToken(supabase: any, userId: string): Promise<string> {
 // Helper: Fetch from Todoist API
 // ============================================================================
 async function fetchFromTodoist(endpoint: string, token: string): Promise<any> {
-  const response = await fetch(`https://api.todoist.com/rest/v2${endpoint}`, {
+  // Current unified Todoist API v1 (not /rest/v1 or /rest/v2 which are deprecated)
+  const url = `https://api.todoist.com/api/v1${endpoint}`;
+  console.log('Fetching from Todoist:', url);
+
+  const response = await fetch(url, {
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
@@ -40,7 +51,14 @@ async function fetchFromTodoist(endpoint: string, token: string): Promise<any> {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Todoist API error:', errorText);
+    console.error('Todoist API error:', {
+      url,
+      status: response.status,
+      statusText: response.statusText,
+      errorText,
+      hasToken: !!token,
+      tokenPrefix: token?.substring(0, 10)
+    });
     throw new Error(`Todoist API error: ${response.status}`);
   }
 
@@ -89,7 +107,15 @@ serve(async (req) => {
     // Handle different request types
     if (type === 'projects') {
       // Fetch all user projects
+      console.log('Fetching Todoist projects for user:', user.id);
+
       const projects = await fetchFromTodoist('/projects', todoistToken);
+      console.log('Retrieved projects:', {
+        type: typeof projects,
+        isArray: Array.isArray(projects),
+        length: projects?.length,
+        sample: projects?.[0]
+      });
       return new Response(
         JSON.stringify({ projects }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -135,6 +161,13 @@ serve(async (req) => {
           if (syncResponse.ok) {
             const completedData = await syncResponse.json();
             completedTasks = completedData.items || [];
+            console.log('Completed tasks from Sync API:', completedTasks.length, 'tasks');
+            if (completedTasks.length > 0) {
+              console.log('Sample completed task structure:', JSON.stringify(completedTasks[0]));
+            }
+          } else {
+            const errorText = await syncResponse.text();
+            console.error('Sync API error:', syncResponse.status, errorText);
           }
         } catch (error) {
           console.error('Error fetching completed tasks:', error);
@@ -173,6 +206,11 @@ serve(async (req) => {
           return completedAt >= sinceDate && completedAt <= untilDate;
         });
       }
+
+      console.log('Returning task counts:', {
+        addedOrUpdated: tasksAddedOrUpdated.length,
+        completed: tasksCompleted.length
+      });
 
       return new Response(
         JSON.stringify({

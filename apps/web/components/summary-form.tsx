@@ -511,73 +511,86 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
         <div className="p-4 rounded-lg border bg-muted/30 space-y-2">
           <p className="text-sm font-mono font-semibold">Preview</p>
 
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <FileText className="h-4 w-4" />
-              <span className="font-mono">
-                {loadingPreview ? "..." : previewCounts.notes} notes
-              </span>
+          <div className="space-y-3">
+            {/* Notes */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <FileText className="h-4 w-4" />
+                <span className="font-mono">
+                  {loadingPreview ? "..." : previewCounts.notes} notes
+                </span>
+              </div>
             </div>
 
-            {repositories.length > 0 ? (
-              repositories.map((repo) => (
-                <div key={repo.id} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <GitBranch className="h-4 w-4 flex-shrink-0" />
-                  <select
-                    value={repo.selected_branch}
-                    onChange={(e) => handleBranchChange(repo.id, e.target.value)}
-                    disabled={isGenerating || loadingBranches[repo.id]}
-                    className="text-xs px-1.5 py-0.5 rounded border border-input bg-background font-mono focus:outline-none focus:ring-1 focus:ring-ring"
-                  >
-                    {loadingBranches[repo.id] ? (
-                      <option>Loading...</option>
-                    ) : (
-                      repo.branches.map(branch => (
-                        <option key={branch} value={branch}>{branch}</option>
-                      ))
-                    )}
-                  </select>
-                  <span className="font-mono">
-                    {loadingPreview ? "..." : (repoCommitCounts[repo.id] || 0)} commits
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => fetchCommitsForRepo(repo.id)}
-                    disabled={isGenerating || fetchingCommits[repo.id]}
-                    className="p-1 hover:bg-muted rounded transition-colors disabled:opacity-50"
-                  >
-                    {fetchingCommits[repo.id] ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <RefreshCw className="h-3.5 w-3.5" />
-                    )}
-                  </button>
+            {/* GitHub Section */}
+            {(repositories.length > 0 || previewCounts.commits > 0) && (
+              <div className="space-y-1.5 pt-2 border-t">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                  <GitBranch className="h-3.5 w-3.5" />
+                  <span>From GitHub</span>
                 </div>
-              ))
-            ) : (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <GitBranch className="h-4 w-4" />
-                <span className="font-mono">
-                  {loadingPreview ? "..." : previewCounts.commits} commits
-                </span>
+                {repositories.length > 0 ? (
+                  repositories.map((repo) => (
+                    <div key={repo.id} className="flex items-center gap-2 text-sm text-muted-foreground pl-5">
+                      <select
+                        value={repo.selected_branch}
+                        onChange={(e) => handleBranchChange(repo.id, e.target.value)}
+                        disabled={isGenerating || loadingBranches[repo.id]}
+                        className="text-xs px-1.5 py-0.5 rounded border border-input bg-background font-mono focus:outline-none focus:ring-1 focus:ring-ring"
+                      >
+                        {loadingBranches[repo.id] ? (
+                          <option>Loading...</option>
+                        ) : (
+                          repo.branches.map(branch => (
+                            <option key={branch} value={branch}>{branch}</option>
+                          ))
+                        )}
+                      </select>
+                      <span className="font-mono">
+                        {loadingPreview ? "..." : (repoCommitCounts[repo.id] || 0)} commits
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => fetchCommitsForRepo(repo.id)}
+                        disabled={isGenerating || fetchingCommits[repo.id]}
+                        className="p-1 hover:bg-muted rounded transition-colors disabled:opacity-50"
+                      >
+                        {fetchingCommits[repo.id] ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground pl-5">
+                    <span className="font-mono">
+                      {loadingPreview ? "..." : previewCounts.commits} commits
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 
+            {/* Todoist Section */}
             {(previewCounts.todoistAddedOrUpdatedTasks > 0 || previewCounts.todoistCompletedTasks > 0) && (
-              <>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Sparkles className="h-4 w-4" />
+              <div className="space-y-1.5 pt-2 border-t">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>From Todoist</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground pl-5">
                   <span className="font-mono">
                     {loadingPreview ? "..." : previewCounts.todoistAddedOrUpdatedTasks} tasks added/updated
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Sparkles className="h-4 w-4" />
+                <div className="flex items-center gap-2 text-sm text-muted-foreground pl-5">
                   <span className="font-mono">
                     {loadingPreview ? "..." : previewCounts.todoistCompletedTasks} tasks completed
                   </span>
                 </div>
-              </>
+              </div>
             )}
           </div>
 

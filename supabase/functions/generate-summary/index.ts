@@ -182,6 +182,15 @@ serve(async (req) => {
       );
     }
 
+    // Debug logging for Todoist tasks
+    if (todoist_tasks) {
+      console.log('Todoist tasks received:', JSON.stringify({
+        addedOrUpdatedCount: todoist_tasks.addedOrUpdated?.length || 0,
+        completedCount: todoist_tasks.completed?.length || 0,
+        sample: todoist_tasks.addedOrUpdated?.[0] || todoist_tasks.completed?.[0]
+      }));
+    }
+
     // Build the user prompt with context
     const userPrompt = buildUserPrompt({
       projectName: project_name,

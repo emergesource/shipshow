@@ -25,6 +25,7 @@ export function ProjectForm({ project, hasTodoistConnection }: ProjectFormProps)
   const [success, setSuccess] = useState(false);
   const [todoistProjects, setTodoistProjects] = useState<Array<{ id: string; name: string }>>([]);
   const [loadingTodoist, setLoadingTodoist] = useState(false);
+  const [todoistError, setTodoistError] = useState<string | null>(null);
   const [selectedTodoistProject, setSelectedTodoistProject] = useState(project?.todoist_project_id || "");
 
   const isEditing = !!project;
@@ -40,10 +41,38 @@ export function ProjectForm({ project, hasTodoistConnection }: ProjectFormProps)
       if (!hasTodoistConnection) return;
 
       setLoadingTodoist(true);
+      setTodoistError(null);
       const result = await fetchTodoistProjects();
 
-      if (result.projects) {
-        setTodoistProjects(result.projects);
+      console.log('Todoist projects result:', result);
+      console.log('Projects type:', typeof result.projects, Array.isArray(result.projects));
+      console.log('Projects value:', result.projects);
+
+      if (result.error) {
+        setTodoistError(result.error);
+      } else if (result.projects) {
+        // Ensure projects is an array
+        let projectsArray = [];
+        if (Array.isArray(result.projects)) {
+          projectsArray = result.projects;
+        } else if (typeof result.projects === 'object' && result.projects !== null) {
+          // If it's an object, it might be a single project or need conversion
+          console.log('Converting object to array:', result.projects);
+
+          // Get all values from the object
+          const values = Object.values(result.projects);
+          console.log('Object values:', values);
+
+          // Find the first value that is an array of projects
+          for (const value of values) {
+            if (Array.isArray(value) && value.length > 0 && value[0]?.id) {
+              projectsArray = value;
+              break;
+            }
+          }
+        }
+        console.log('Setting projects array:', projectsArray);
+        setTodoistProjects(projectsArray);
       }
 
       setLoadingTodoist(false);
@@ -127,14 +156,21 @@ export function ProjectForm({ project, hasTodoistConnection }: ProjectFormProps)
               className="w-full p-3 rounded-md border border-input bg-background text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
             >
               <option value="">No Todoist project linked</option>
-              {todoistProjects.map(tp => (
+              {Array.isArray(todoistProjects) && todoistProjects.map(tp => (
                 <option key={tp.id} value={tp.id}>{tp.name}</option>
               ))}
             </select>
           )}
-          <p className="text-xs text-muted-foreground">
-            Link a Todoist project to include tasks in your summaries
-          </p>
+          {todoistError && (
+            <p className="text-xs text-destructive">
+              Error loading Todoist projects: {todoistError}
+            </p>
+          )}
+          {!todoistError && (
+            <p className="text-xs text-muted-foreground">
+              Link a Todoist project to include tasks in your summaries
+            </p>
+          )}
         </div>
       )}
 

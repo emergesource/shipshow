@@ -5,7 +5,7 @@ import { SummaryEditForm } from "@/components/summary-edit-form";
 import { RegenerateSummaryButton } from "@/components/regenerate-summary-button";
 import { DeleteSummaryButton } from "@/components/delete-summary-button";
 import Link from "next/link";
-import { ArrowLeft, FolderGit2, Users, Calendar, GitBranch, Send } from "lucide-react";
+import { ArrowLeft, FolderGit2, Users, Calendar, GitBranch, Send, FileText, Sparkles } from "lucide-react";
 import { GenerateMessageDialog } from "@/components/generate-message-dialog";
 import { MessageCard } from "@/components/message-card";
 
@@ -189,29 +189,67 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
 
       {/* Metadata */}
       <Card className="p-6 bg-muted/30">
-        <div className="space-y-3">
+        <div className="space-y-4">
           <h3 className="font-mono font-semibold text-sm">Summary Details</h3>
-          <div className="grid md:grid-cols-2 gap-3 text-sm">
-            <div className="flex justify-between">
+
+          {/* Notes Section */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+              <FileText className="h-3.5 w-3.5" />
+              <span>Notes</span>
+            </div>
+            <div className="flex justify-between text-sm pl-5">
               <span className="text-muted-foreground font-mono">Notes included</span>
               <span className="font-mono">{counts.notes}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground font-mono">Commits included</span>
-              <span className="font-mono">{counts.commits}</span>
+          </div>
+
+          {/* GitHub Section */}
+          {counts.commits > 0 && (
+            <div className="space-y-2 pt-2 border-t">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                <GitBranch className="h-3.5 w-3.5" />
+                <span>From GitHub</span>
+              </div>
+              <div className="flex justify-between text-sm pl-5">
+                <span className="text-muted-foreground font-mono">Commits included</span>
+                <span className="font-mono">{counts.commits}</span>
+              </div>
+              {repoBranches.length > 0 && (
+                <div className="space-y-1.5 pl-5">
+                  <h4 className="font-mono text-xs text-muted-foreground">Branches used:</h4>
+                  {repoBranches.map((repo, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-sm">
+                      <span className="font-mono text-muted-foreground">{repo.name}</span>
+                      <span className="text-muted-foreground">/</span>
+                      <span className="font-mono">{repo.branch}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            {(summary.todoist_tasks_active_count > 0 || summary.todoist_tasks_completed_count > 0) && (
-              <>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground font-mono">Tasks added/updated</span>
-                  <span className="font-mono">{summary.todoist_tasks_active_count}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground font-mono">Tasks completed</span>
-                  <span className="font-mono">{summary.todoist_tasks_completed_count}</span>
-                </div>
-              </>
-            )}
+          )}
+
+          {/* Todoist Section */}
+          {(summary.todoist_tasks_active_count > 0 || summary.todoist_tasks_completed_count > 0) && (
+            <div className="space-y-2 pt-2 border-t">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>From Todoist</span>
+              </div>
+              <div className="flex justify-between text-sm pl-5">
+                <span className="text-muted-foreground font-mono">Tasks added/updated</span>
+                <span className="font-mono">{summary.todoist_tasks_active_count}</span>
+              </div>
+              <div className="flex justify-between text-sm pl-5">
+                <span className="text-muted-foreground font-mono">Tasks completed</span>
+                <span className="font-mono">{summary.todoist_tasks_completed_count}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Timestamps */}
+          <div className="grid md:grid-cols-2 gap-3 text-sm pt-2 border-t">
             <div className="flex justify-between">
               <span className="text-muted-foreground font-mono">Created</span>
               <span className="font-mono">
@@ -233,22 +271,6 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
               </span>
             </div>
           </div>
-
-          {repoBranches.length > 0 && (
-            <div className="pt-3 border-t space-y-2">
-              <h4 className="font-mono font-semibold text-xs text-muted-foreground">Branches Used</h4>
-              <div className="space-y-1.5">
-                {repoBranches.map((repo, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-sm">
-                    <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="font-mono text-muted-foreground">{repo.name}</span>
-                    <span className="text-muted-foreground">/</span>
-                    <span className="font-mono">{repo.branch}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </Card>
 
