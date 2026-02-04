@@ -158,25 +158,26 @@ create policy "Users can manage commits in their repositories" on commits
 
 -- ============================================================================
 -- AUDIENCES
--- Target audiences for updates
+-- Target audiences for updates (global to user, reusable across projects)
 -- ============================================================================
 create table audiences (
   id uuid primary key default gen_random_uuid(),
-  project_id uuid not null references projects(id),
+  user_id uuid not null references auth.users(id) on delete cascade,
   name text not null,
-  tone text not null,
-  length text not null,
-  created_at timestamptz default now()
+  description text,
+  is_system_template boolean default false,
+  system_template_id text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
 );
 
 
 alter table audiences enable row level security;
 grant select, insert, update, delete on table audiences to authenticated;
-create policy "Users can manage audiences in their own projects" on audiences
+create policy "Users can manage their own audiences" on audiences
     for all
-    using ( project_id in (select id from projects where user_id = auth.uid()) )
-    with check ( project_id in (select id from projects where user_id = auth.uid())
-    );
+    using ( auth.uid() = user_id )
+    with check ( auth.uid() = user_id );
 
 
 -- ============================================================================
