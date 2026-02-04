@@ -181,17 +181,35 @@ create policy "Users can manage their own audiences" on audiences
 
 
 -- ============================================================================
+-- PROMPT_TEMPLATES
+-- System-wide base prompts for AI summary generation
+-- ============================================================================
+create table prompt_templates (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  description text,
+  system_prompt text not null,
+  is_default boolean default false,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+alter table prompt_templates enable row level security;
+grant select on table prompt_templates to authenticated;
+
+-- ============================================================================
 -- SUMMARIES
 -- What the work means for a specific audience
 -- ============================================================================
 create table summaries (
   id uuid primary key default gen_random_uuid(),
-  project_id uuid not null references projects(id),
-  audience_id uuid not null references audiences(id),
+  project_id uuid not null references projects(id) on delete cascade,
+  audience_id uuid not null references audiences(id) on delete cascade,
   text text not null,
   period_start timestamptz,
   period_end timestamptz,
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
 );
 
 
@@ -207,8 +225,8 @@ create policy "Users can manage summaries in their own projects" on summaries
 -- Join table linking summaries to notes
 -- ============================================================================
 create table summary_notes (
-  summary_id uuid references summaries(id),
-  note_id uuid references notes(id),
+  summary_id uuid references summaries(id) on delete cascade,
+  note_id uuid references notes(id) on delete cascade,
   primary key (summary_id, note_id)
 );
 
@@ -225,8 +243,8 @@ create policy "Users can manage summary_notes in their own projects" on summary_
 -- Join table linking summaries to commits
 -- ============================================================================
 create table summary_commits (
-  summary_id uuid references summaries(id),
-  commit_id uuid references commits(id),
+  summary_id uuid references summaries(id) on delete cascade,
+  commit_id uuid references commits(id) on delete cascade,
   primary key (summary_id, commit_id)
 );
 

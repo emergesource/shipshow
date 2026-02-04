@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Plus, FolderGit2, FileText, GitBranch } from "lucide-react";
+import { Plus, FolderGit2, FileText, GitBranch, Sparkles } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +29,8 @@ async function getProjects() {
       description,
       created_at,
       notes:notes(count),
-      project_repositories(count)
+      project_repositories(count),
+      summaries(count)
     `)
     .order("created_at", { ascending: false });
 
@@ -91,6 +92,10 @@ export default async function ProjectsPage() {
                   <div className="flex items-center gap-1.5">
                     <GitBranch className="h-4 w-4" />
                     <span className="font-mono">{project.project_repositories[0]?.count || 0}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="h-4 w-4" />
+                    <span className="font-mono">{project.summaries[0]?.count || 0}</span>
                   </div>
                 </div>
               </Card>
