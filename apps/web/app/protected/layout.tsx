@@ -44,7 +44,7 @@ export default function ProtectedLayout({
 
       <footer className="w-full border-t py-8">
         <div className="max-w-7xl mx-auto px-6 text-center text-sm text-muted-foreground">
-          <p className="font-mono">&copy; 2026 <a className="underline" href="https://emergesource.com" target="_blank" rel="noopener noreferrer">emergesource</a> • Showcase your work!</p>
+          <p className="font-mono">&copy; 2026 <a className="underline" href="https://emergesource.com" target="_blank" rel="noopener noreferrer">emergesource</a> • Showcase your work. Get noticed.  Get paid.</p>
         </div>
       </footer>
     </main>

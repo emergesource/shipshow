@@ -213,12 +213,19 @@ export default async function DashboardPage() {
                     {project.description}
                   </p>
                 )}
-                <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono flex-wrap">
-                  <span>{project.notes[0]?.count || 0} notes</span>
-                  <span>•</span>
-                  <span>{project.project_repositories[0]?.count || 0} repos</span>
-                  <span>•</span>
-                  <span>{project.summaries[0]?.count || 0} summaries</span>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <FileText className="h-4 w-4" />
+                    <span className="font-mono">{project.notes[0]?.count || 0}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <GitBranch className="h-4 w-4" />
+                    <span className="font-mono">{project.project_repositories[0]?.count || 0}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="h-4 w-4" />
+                    <span className="font-mono">{project.summaries[0]?.count || 0}</span>
+                  </div>
                 </div>
               </Card>
             </Link>
