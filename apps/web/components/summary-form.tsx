@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { generateSummary } from "@/app/protected/summaries/actions";
-import { Loader2, Calendar, FileText, GitBranch, Sparkles } from "lucide-react";
+import { fetchCommitsAction } from "@/app/protected/repositories/actions";
+import { Loader2, Calendar, FileText, GitBranch, Sparkles, RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface Project {
@@ -43,6 +44,16 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
     commits: number;
   } | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+
+  const [repositories, setRepositories] = useState<Array<{
+    id: string;
+    name: string;
+    full_name: string;
+    default_branch: string;
+    selected_branch: string;
+  }>>([]);
+  const [repoCommitCounts, setRepoCommitCounts] = useState<Record<string, number>>({});
+  const [fetchingCommits, setFetchingCommits] = useState<Record<string, boolean>>({});
 
   // Calculate date range based on period
   const getDateRange = useCallback((): { start: string; end: string } | null => {
@@ -82,17 +93,52 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
     };
   }, [timePeriod, customStartDate, customEndDate]);
 
+  // Load repositories when project changes
+  useEffect(() => {
+    async function loadRepositories() {
+      if (!selectedProject) {
+        setRepositories([]);
+        return;
+      }
+
+      try {
+        const supabase = createClient();
+        const { data: projectRepos } = await supabase
+          .from("project_repositories")
+          .select(`
+            repositories(id, name, full_name, default_branch)
+          `)
+          .eq("project_id", selectedProject);
+
+        const repos = projectRepos?.map(pr => pr.repositories).filter(Boolean) || [];
+        setRepositories(repos.map(repo => ({
+          id: repo.id,
+          name: repo.name,
+          full_name: repo.full_name,
+          default_branch: repo.default_branch || "main",
+          selected_branch: repo.default_branch || "main"
+        })));
+      } catch (err) {
+        console.error("Error loading repositories:", err);
+      }
+    }
+
+    loadRepositories();
+  }, [selectedProject]);
+
   // Load preview counts when project or time period changes
   useEffect(() => {
     async function loadPreview() {
       if (!selectedProject) {
         setPreviewCounts(null);
+        setRepoCommitCounts({});
         return;
       }
 
       const dateRange = getDateRange();
       if (!dateRange) {
         setPreviewCounts(null);
+        setRepoCommitCounts({});
         return;
       }
 
@@ -109,15 +155,13 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
           .lte("created_at", dateRange.end);
 
         // Get repository IDs for project
-        const { data: projectRepos } = await supabase
-          .from("project_repositories")
-          .select("repository_id")
-          .eq("project_id", selectedProject);
-
-        const repoIds = projectRepos?.map(pr => pr.repository_id) || [];
+        const repoIds = repositories.map(r => r.id);
 
         let commitsCount = 0;
+        const repoCounts: Record<string, number> = {};
+
         if (repoIds.length > 0) {
+          // Count total commits
           const { count } = await supabase
             .from("commits")
             .select("*", { count: "exact", head: true })
@@ -126,12 +170,25 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
             .lte("committed_at", dateRange.end);
 
           commitsCount = count || 0;
+
+          // Count commits per repository
+          for (const repoId of repoIds) {
+            const { count: repoCount } = await supabase
+              .from("commits")
+              .select("*", { count: "exact", head: true })
+              .eq("repository_id", repoId)
+              .gte("committed_at", dateRange.start)
+              .lte("committed_at", dateRange.end);
+
+            repoCounts[repoId] = repoCount || 0;
+          }
         }
 
         setPreviewCounts({
           notes: notesCount || 0,
           commits: commitsCount
         });
+        setRepoCommitCounts(repoCounts);
       } catch (err) {
         console.error("Error loading preview:", err);
       } finally {
@@ -140,7 +197,63 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
     }
 
     loadPreview();
-  }, [selectedProject, timePeriod, customStartDate, customEndDate, getDateRange]);
+  }, [selectedProject, timePeriod, customStartDate, customEndDate, getDateRange, repositories]);
+
+  function handleBranchChange(repoId: string, branch: string) {
+    setRepositories(prev => prev.map(repo =>
+      repo.id === repoId ? { ...repo, selected_branch: branch } : repo
+    ));
+  }
+
+  async function fetchCommitsForRepo(repoId: string) {
+    setFetchingCommits(prev => ({ ...prev, [repoId]: true }));
+
+    try {
+      // Call the server action to fetch commits
+      const result = await fetchCommitsAction(repoId);
+
+      if (result?.error) {
+        console.error("Error fetching commits:", result.error);
+        setError(result.error);
+      } else {
+        // Refresh preview counts after fetching
+        const dateRange = getDateRange();
+        if (dateRange) {
+          const supabase = createClient();
+
+          // Count total commits across all repos
+          const { count } = await supabase
+            .from("commits")
+            .select("*", { count: "exact", head: true })
+            .in("repository_id", repositories.map(r => r.id))
+            .gte("committed_at", dateRange.start)
+            .lte("committed_at", dateRange.end);
+
+          // Count commits for this specific repo
+          const { count: repoCount } = await supabase
+            .from("commits")
+            .select("*", { count: "exact", head: true })
+            .eq("repository_id", repoId)
+            .gte("committed_at", dateRange.start)
+            .lte("committed_at", dateRange.end);
+
+          setPreviewCounts(prev => prev ? {
+            ...prev,
+            commits: count || 0
+          } : null);
+
+          setRepoCommitCounts(prev => ({
+            ...prev,
+            [repoId]: repoCount || 0
+          }));
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching commits:", err);
+    } finally {
+      setFetchingCommits(prev => ({ ...prev, [repoId]: false }));
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -330,20 +443,54 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
       {selectedProject && previewCounts && (
         <div className="p-4 rounded-lg border bg-muted/30 space-y-2">
           <p className="text-sm font-mono font-semibold">Preview</p>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1.5">
+
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <FileText className="h-4 w-4" />
               <span className="font-mono">
                 {loadingPreview ? "..." : previewCounts.notes} notes
               </span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <GitBranch className="h-4 w-4" />
-              <span className="font-mono">
-                {loadingPreview ? "..." : previewCounts.commits} commits
-              </span>
-            </div>
+
+            {repositories.length > 0 ? (
+              repositories.map((repo) => (
+                <div key={repo.id} className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <GitBranch className="h-4 w-4 flex-shrink-0" />
+                  <select
+                    value={repo.selected_branch}
+                    onChange={(e) => handleBranchChange(repo.id, e.target.value)}
+                    disabled={isGenerating}
+                    className="text-xs px-1.5 py-0.5 rounded border border-input bg-background font-mono focus:outline-none focus:ring-1 focus:ring-ring"
+                  >
+                    <option value={repo.default_branch}>{repo.default_branch}</option>
+                  </select>
+                  <span className="font-mono">
+                    {loadingPreview ? "..." : (repoCommitCounts[repo.id] || 0)} commits
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => fetchCommitsForRepo(repo.id)}
+                    disabled={isGenerating || fetchingCommits[repo.id]}
+                    className="p-1 hover:bg-muted rounded transition-colors disabled:opacity-50"
+                  >
+                    {fetchingCommits[repo.id] ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                </div>
+              ))
+            ) : (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <GitBranch className="h-4 w-4" />
+                <span className="font-mono">
+                  {loadingPreview ? "..." : previewCounts.commits} commits
+                </span>
+              </div>
+            )}
           </div>
+
           {previewCounts.notes === 0 && previewCounts.commits === 0 && (
             <p className="text-xs text-destructive">
               No work found in this time period
