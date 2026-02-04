@@ -250,33 +250,34 @@ export default async function DashboardPage() {
           </div>
           <div className="space-y-3">
             {recentSummaries.map((summary) => (
-              <Link key={summary.id} href={`/protected/summaries/${summary.id}`}>
-                <Card className="p-4 hover:border-primary/50 transition-colors">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <FolderGit2 className="h-4 w-4" />
-                        <span className="font-mono">{summary.projects.name}</span>
-                      </div>
-                      <span className="text-muted-foreground">•</span>
-                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <Users className="h-4 w-4" />
-                        <span className="font-mono">{summary.audiences.name}</span>
-                      </div>
-                      <span className="text-muted-foreground">•</span>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(summary.created_at).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric"
-                        })}
-                      </p>
+              <Card key={summary.id} className="p-4 hover:border-primary/50 transition-colors">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(summary.created_at).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit"
+                      })}
+                    </p>
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <FolderGit2 className="h-4 w-4" />
+                      <span className="font-mono">{summary.projects.name}</span>
                     </div>
-                    <p className="text-foreground leading-relaxed line-clamp-2">
+                    <span className="text-muted-foreground">•</span>
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Users className="h-4 w-4" />
+                      <span className="font-mono">{summary.audiences.name}</span>
+                    </div>
+                  </div>
+                  <Link href={`/protected/summaries/${summary.id}`}>
+                    <p className="text-foreground leading-relaxed hover:text-muted-foreground transition-colors line-clamp-2">
                       {summary.text}
                     </p>
-                  </div>
-                </Card>
-              </Link>
+                  </Link>
+                </div>
+              </Card>
             ))}
           </div>
         </div>

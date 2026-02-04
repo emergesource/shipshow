@@ -67,10 +67,10 @@ export default async function SummariesPage() {
 
       {/* Summaries List */}
       {summaries.length > 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {summaries.map((summary) => (
-            <Link key={summary.id} href={`/protected/summaries/${summary.id}`}>
-              <Card className="p-6 space-y-4 hover:border-primary/50 transition-colors">
+            <Card key={summary.id} className="p-5 hover:border-primary/50 transition-colors">
+              <div className="space-y-3">
                 {/* Header Info */}
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-3 flex-wrap">
@@ -110,11 +110,13 @@ export default async function SummariesPage() {
                 </div>
 
                 {/* Summary Text Preview */}
-                <p className="text-foreground leading-relaxed line-clamp-3">
-                  {summary.text}
-                </p>
-              </Card>
-            </Link>
+                <Link href={`/protected/summaries/${summary.id}`}>
+                  <p className="text-foreground leading-relaxed line-clamp-3 hover:text-muted-foreground transition-colors">
+                    {summary.text}
+                  </p>
+                </Link>
+              </div>
+            </Card>
           ))}
         </div>
       ) : (
