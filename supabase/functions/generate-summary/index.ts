@@ -99,6 +99,11 @@ function buildUserPrompt(data: {
 
 Based on the notes, commits, and tasks above, generate a summary appropriate for the "${audienceName}" audience.`;
 
+  // Add more guidance if there are Todoist tasks
+  if (todoistTasks && (todoistTasks.addedOrUpdated.length > 0 || todoistTasks.completed.length > 0)) {
+    prompt += ` Make sure to reference the specific Todoist tasks by name to show what work is planned and what has been accomplished.`;
+  }
+
   return prompt;
 }
 
@@ -187,7 +192,8 @@ serve(async (req) => {
       console.log('Todoist tasks received:', JSON.stringify({
         addedOrUpdatedCount: todoist_tasks.addedOrUpdated?.length || 0,
         completedCount: todoist_tasks.completed?.length || 0,
-        sample: todoist_tasks.addedOrUpdated?.[0] || todoist_tasks.completed?.[0]
+        addedOrUpdatedSample: todoist_tasks.addedOrUpdated?.[0],
+        completedSample: todoist_tasks.completed?.[0]
       }));
     }
 
@@ -202,6 +208,12 @@ serve(async (req) => {
       commits: commits || [],
       todoistTasks: todoist_tasks
     });
+
+    // Log the full prompt to see what's being sent to AI
+    console.log('User prompt being sent to AI (first 2000 chars):', userPrompt.substring(0, 2000));
+    if (userPrompt.length > 2000) {
+      console.log('...and last 500 chars:', userPrompt.substring(userPrompt.length - 500));
+    }
 
     // Call OpenAI API
     const openaiResponse = await fetch(OPENAI_API_URL, {
