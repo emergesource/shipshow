@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { generateSummary } from "@/app/protected/summaries/actions";
@@ -38,6 +39,12 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
   const [timePeriod, setTimePeriod] = useState<TimePeriod>("this_week");
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
+
+  const [usageInfo, setUsageInfo] = useState<{
+    used: number;
+    limit: number;
+    plan: string;
+  } | null>(null);
 
   const [previewCounts, setPreviewCounts] = useState<{
     notes: number;
@@ -96,6 +103,36 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
       end: end.toISOString()
     };
   }, [timePeriod, customStartDate, customEndDate]);
+
+  // Load usage info on mount
+  useEffect(() => {
+    async function loadUsageInfo() {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("subscription_plan, summaries_used_this_period")
+          .eq("id", user.id)
+          .single();
+
+        if (profile) {
+          const TIER_LIMITS: Record<string, number> = { free: 5, individual: 30 };
+          setUsageInfo({
+            used: profile.summaries_used_this_period || 0,
+            limit: TIER_LIMITS[profile.subscription_plan] || 5,
+            plan: profile.subscription_plan || 'free'
+          });
+        }
+      } catch (err) {
+        console.error("Error loading usage info:", err);
+      }
+    }
+
+    loadUsageInfo();
+  }, []);
 
   // Load repositories when project changes
   useEffect(() => {
@@ -388,6 +425,32 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Usage Banner */}
+      {usageInfo && (
+        <div className="p-4 rounded-lg bg-muted border">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">
+                {usageInfo.used} / {usageInfo.limit} summaries used this {usageInfo.plan === 'free' ? 'month' : 'period'}
+              </p>
+              <div className="w-64 bg-background rounded-full h-1.5">
+                <div
+                  className="bg-primary h-1.5 rounded-full transition-all"
+                  style={{ width: `${Math.min((usageInfo.used / usageInfo.limit) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+            {usageInfo.plan === 'free' && usageInfo.used >= usageInfo.limit - 2 && (
+              <Link href="/protected/billing">
+                <Button size="sm" variant="outline" type="button">
+                  Upgrade
+                </Button>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Project Selection */}
       <div className="space-y-2">
         <Label htmlFor="project" className="font-mono">

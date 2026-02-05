@@ -5,8 +5,17 @@
 create table profiles (
   id uuid primary key references auth.users(id),
   name text,
+  stripe_customer_id text,
+  subscription_status text default 'free',
+  subscription_plan text default 'free',
+  subscription_current_period_end timestamptz,
+  summaries_used_this_period integer default 0,
+  period_start timestamptz default now(),
   created_at timestamptz default now()
 );
+
+-- Index for fast customer lookups
+create index idx_profiles_stripe_customer_id on profiles(stripe_customer_id);
 
 
 alter table profiles enable row level security;
@@ -15,6 +24,29 @@ create policy "Users can manage their own profile" on profiles
   for all
   using ( auth.uid() = id )
   with check ( auth.uid() = id );
+
+-- ============================================================================
+-- SUBSCRIPTION_EVENTS
+-- Audit trail for subscription lifecycle events
+-- ============================================================================
+create table subscription_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  event_type text not null,
+  stripe_event_id text unique,
+  event_data jsonb,
+  created_at timestamptz default now()
+);
+
+alter table subscription_events enable row level security;
+grant select on table subscription_events to authenticated;
+create policy "Users can view own subscription events" on subscription_events
+  for select
+  using ( auth.uid() = user_id );
+
+-- Indexes for event lookups
+create index idx_subscription_events_user_id on subscription_events(user_id, created_at desc);
+create index idx_subscription_events_stripe_id on subscription_events(stripe_event_id);
 
 -- ============================================================================
 -- PROJECTS

@@ -12,6 +12,61 @@ export async function generateSummary(formData: FormData) {
     return { error: "Not authenticated" };
   }
 
+  // Fetch user profile with subscription info
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("subscription_plan, subscription_status, summaries_used_this_period, period_start, subscription_current_period_end")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError || !profile) {
+    return { error: "Unable to fetch subscription information" };
+  }
+
+  // Check if period needs reset
+  const now = new Date();
+  let periodStart = profile.period_start ? new Date(profile.period_start) : now;
+
+  // Determine if we need to reset the counter
+  let needsReset = false;
+  if (profile.subscription_status === 'active' && profile.subscription_current_period_end) {
+    // For paid users, reset when period ends
+    const periodEnd = new Date(profile.subscription_current_period_end);
+    needsReset = now > periodEnd;
+  } else {
+    // For free users, reset on 1st of month
+    const currentMonth = now.getMonth();
+    const periodMonth = periodStart.getMonth();
+    needsReset = currentMonth !== periodMonth || now.getFullYear() !== periodStart.getFullYear();
+  }
+
+  // Reset counter if needed
+  let currentUsage = profile.summaries_used_this_period || 0;
+  if (needsReset) {
+    currentUsage = 0;
+    periodStart = now;
+    await supabase
+      .from("profiles")
+      .update({
+        summaries_used_this_period: 0,
+        period_start: now.toISOString()
+      })
+      .eq("id", user.id);
+  }
+
+  // Check usage limit
+  const TIER_LIMITS: Record<string, number> = {
+    free: 5,
+    individual: 30
+  };
+  const limit = TIER_LIMITS[profile.subscription_plan] || TIER_LIMITS.free;
+
+  if (currentUsage >= limit) {
+    return {
+      error: `You've reached your limit of ${limit} summaries this ${profile.subscription_status === 'active' ? 'billing period' : 'month'}. ${profile.subscription_status !== 'active' ? 'Upgrade to Individual plan for 30 summaries/month.' : 'Your limit will reset on ' + new Date(profile.subscription_current_period_end!).toLocaleDateString()}`
+    };
+  }
+
   try {
     const projectId = formData.get("project_id") as string;
     const audienceId = formData.get("audience_id") as string;
@@ -200,6 +255,14 @@ export async function generateSummary(formData: FormData) {
       await supabase.from("summary_commits").insert(commitLinks);
     }
 
+    // Increment usage counter
+    await supabase
+      .from("profiles")
+      .update({
+        summaries_used_this_period: currentUsage + 1
+      })
+      .eq("id", user.id);
+
     revalidatePath("/protected/summaries");
     revalidatePath(`/protected/projects/${projectId}`);
 
@@ -216,6 +279,61 @@ export async function regenerateSummary(summaryId: string) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {
     return { error: "Not authenticated" };
+  }
+
+  // Fetch user profile with subscription info
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("subscription_plan, subscription_status, summaries_used_this_period, period_start, subscription_current_period_end")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError || !profile) {
+    return { error: "Unable to fetch subscription information" };
+  }
+
+  // Check if period needs reset
+  const now = new Date();
+  let periodStart = profile.period_start ? new Date(profile.period_start) : now;
+
+  // Determine if we need to reset the counter
+  let needsReset = false;
+  if (profile.subscription_status === 'active' && profile.subscription_current_period_end) {
+    // For paid users, reset when period ends
+    const periodEnd = new Date(profile.subscription_current_period_end);
+    needsReset = now > periodEnd;
+  } else {
+    // For free users, reset on 1st of month
+    const currentMonth = now.getMonth();
+    const periodMonth = periodStart.getMonth();
+    needsReset = currentMonth !== periodMonth || now.getFullYear() !== periodStart.getFullYear();
+  }
+
+  // Reset counter if needed
+  let currentUsage = profile.summaries_used_this_period || 0;
+  if (needsReset) {
+    currentUsage = 0;
+    periodStart = now;
+    await supabase
+      .from("profiles")
+      .update({
+        summaries_used_this_period: 0,
+        period_start: now.toISOString()
+      })
+      .eq("id", user.id);
+  }
+
+  // Check usage limit
+  const TIER_LIMITS: Record<string, number> = {
+    free: 5,
+    individual: 30
+  };
+  const limit = TIER_LIMITS[profile.subscription_plan] || TIER_LIMITS.free;
+
+  if (currentUsage >= limit) {
+    return {
+      error: `You've reached your limit of ${limit} summaries this ${profile.subscription_status === 'active' ? 'billing period' : 'month'}. ${profile.subscription_status !== 'active' ? 'Upgrade to Individual plan for 30 summaries/month.' : 'Your limit will reset on ' + new Date(profile.subscription_current_period_end!).toLocaleDateString()}`
+    };
   }
 
   try {
@@ -365,6 +483,14 @@ export async function regenerateSummary(summaryId: string) {
       console.error("Error updating summary:", updateError);
       return { error: "Failed to update summary" };
     }
+
+    // Increment usage counter
+    await supabase
+      .from("profiles")
+      .update({
+        summaries_used_this_period: currentUsage + 1
+      })
+      .eq("id", user.id);
 
     revalidatePath("/protected/summaries");
     revalidatePath(`/protected/summaries/${summaryId}`);
