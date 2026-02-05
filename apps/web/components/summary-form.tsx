@@ -145,6 +145,8 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
   // Load preview counts when project or time period changes
   useEffect(() => {
     async function loadPreview() {
+      console.log('loadPreview called with project:', selectedProject);
+
       if (!selectedProject) {
         setPreviewCounts(null);
         setRepoCommitCounts({});
@@ -152,6 +154,8 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
       }
 
       const dateRange = getDateRange();
+      console.log('Date range:', dateRange);
+
       if (!dateRange) {
         setPreviewCounts(null);
         setRepoCommitCounts({});
@@ -159,6 +163,7 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
       }
 
       setLoadingPreview(true);
+      console.log('Starting to load preview data...');
       try {
         const supabase = createClient();
 
@@ -210,7 +215,10 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
           .eq("id", selectedProject)
           .single();
 
+        console.log('Project for Todoist check:', project);
+
         if (project?.todoist_project_id) {
+          console.log('Project has Todoist linked, fetching tasks...');
           try {
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
@@ -231,15 +239,24 @@ export function SummaryForm({ projects, audiences, defaultProjectId }: SummaryFo
                 }
               );
 
+              console.log('Todoist response status:', todoistResponse.status);
+
               if (todoistResponse.ok) {
                 const todoistResult = await todoistResponse.json();
+                console.log('Todoist tasks result:', todoistResult);
                 todoistAddedOrUpdatedTasks = (todoistResult.tasks_added_or_updated || []).length;
                 todoistCompletedTasks = (todoistResult.tasks_completed || []).length;
+                console.log('Task counts:', { added: todoistAddedOrUpdatedTasks, completed: todoistCompletedTasks });
+              } else {
+                const errorText = await todoistResponse.text();
+                console.error('Todoist fetch failed:', errorText);
               }
             }
           } catch (error) {
             console.error("Error fetching Todoist tasks for preview:", error);
           }
+        } else {
+          console.log('No Todoist project linked to this project');
         }
 
         setPreviewCounts({

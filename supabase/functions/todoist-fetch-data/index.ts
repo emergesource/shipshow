@@ -109,13 +109,31 @@ serve(async (req) => {
       // Fetch all user projects
       console.log('Fetching Todoist projects for user:', user.id);
 
-      const projects = await fetchFromTodoist('/projects', todoistToken);
-      console.log('Retrieved projects:', {
-        type: typeof projects,
-        isArray: Array.isArray(projects),
-        length: projects?.length,
-        sample: projects?.[0]
+      const projectsResponse = await fetchFromTodoist('/projects', todoistToken);
+      console.log('Retrieved projects response:', {
+        type: typeof projectsResponse,
+        isArray: Array.isArray(projectsResponse),
+        sample: projectsResponse?.[0] || projectsResponse
       });
+
+      // Extract array from response (same logic as tasks)
+      let projects: any[] = [];
+      if (Array.isArray(projectsResponse)) {
+        projects = projectsResponse;
+      } else if (typeof projectsResponse === 'object' && projectsResponse !== null) {
+        const values = Object.values(projectsResponse);
+        for (const value of values) {
+          if (Array.isArray(value)) {
+            projects = value;
+            break;
+          }
+        }
+      }
+
+      // The unified API v1 returns projects with numeric IDs
+      // We need to use the numeric 'id' field, not 'v2_id' or other fields
+      console.log('Sample project structure:', projects[0]);
+
       return new Response(
         JSON.stringify({ projects }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -131,11 +149,55 @@ serve(async (req) => {
         );
       }
 
-      // Fetch all current tasks in project
-      const allTasks = await fetchFromTodoist(
+      console.log('Fetching tasks for project_id:', project_id);
+
+      // Fetch tasks filtered by project
+      const tasksResponse = await fetchFromTodoist(
         `/tasks?project_id=${project_id}`,
         todoistToken
       );
+
+      console.log('Tasks response structure:', {
+        type: typeof tasksResponse,
+        isArray: Array.isArray(tasksResponse),
+        keys: tasksResponse ? Object.keys(tasksResponse) : null,
+        sample: tasksResponse
+      });
+
+      // Ensure allTasks is an array - default to empty array
+      let allTasks: any[] = [];
+
+      if (Array.isArray(tasksResponse)) {
+        console.log('Response is already an array');
+        allTasks = tasksResponse;
+      } else if (typeof tasksResponse === 'object' && tasksResponse !== null) {
+        console.log('Response is an object, trying to extract array');
+
+        // Check if response has a 'results' property (unified API v1 format)
+        if (tasksResponse.results && Array.isArray(tasksResponse.results)) {
+          console.log('Found results array:', tasksResponse.results.length, 'items');
+          allTasks = tasksResponse.results;
+        } else {
+          // Try to extract array from object structure (fallback)
+          const values = Object.values(tasksResponse);
+          console.log('Object values:', values);
+
+          for (const value of values) {
+            if (Array.isArray(value)) {
+              console.log('Found array value:', value.length, 'items');
+              allTasks = value;
+              break;
+            }
+          }
+        }
+      }
+
+      console.log('Final allTasks array:', {
+        isArray: Array.isArray(allTasks),
+        length: allTasks.length,
+        type: typeof allTasks,
+        sample: allTasks[0]
+      });
 
       // Fetch completed tasks using Sync API
       let completedTasks = [];
@@ -178,21 +240,32 @@ serve(async (req) => {
       let tasksAddedOrUpdated = allTasks;
       let tasksCompleted = completedTasks;
 
+      // Ensure allTasks and completedTasks are arrays before filtering
+      if (!Array.isArray(allTasks)) {
+        console.error('allTasks is not an array:', typeof allTasks, allTasks);
+        allTasks = [];
+      }
+      if (!Array.isArray(completedTasks)) {
+        console.error('completedTasks is not an array:', typeof completedTasks, completedTasks);
+        completedTasks = [];
+      }
+
       if (since && until) {
         const sinceDate = new Date(since);
         const untilDate = new Date(until);
 
         // Filter tasks that were created OR updated within range
+        // Note: unified API v1 uses 'added_at' not 'created_at'
         tasksAddedOrUpdated = allTasks.filter((task: any) => {
-          const createdAt = new Date(task.created_at);
+          const addedAt = new Date(task.added_at);
           // Check if task was created in range
-          if (createdAt >= sinceDate && createdAt <= untilDate) {
+          if (addedAt >= sinceDate && addedAt <= untilDate) {
             return true;
           }
           // Check if task was updated in range (if it has updated_at)
           if (task.updated_at) {
             const updatedAt = new Date(task.updated_at);
-            if (updatedAt >= sinceDate && updatedAt <= untilDate && updatedAt > createdAt) {
+            if (updatedAt >= sinceDate && updatedAt <= untilDate && updatedAt > addedAt) {
               return true;
             }
           }

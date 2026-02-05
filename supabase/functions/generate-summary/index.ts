@@ -26,7 +26,7 @@ function buildUserPrompt(data: {
   periodEnd: string;
   notes: Array<{ content: string; created_at: string }>;
   commits: Array<{ message: string; author: string; committed_at: string }>;
-  todoistTasks?: { addedOrUpdated: Array<{ content: string; created_at: string; due?: any }>; completed: Array<{ content: string; completed_at: string }> };
+  todoistTasks?: { addedOrUpdated: Array<{ content: string; added_at: string; due?: any }>; completed: Array<{ content: string; completed_at: string }> };
 }): string {
   const { projectName, audienceName, audienceDescription, periodStart, periodEnd, notes, commits, todoistTasks } = data;
 
